@@ -1,0 +1,641 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * shadcn/ui theme variables - Enhanced for futuristic AI theme
+ */
+:root {
+  /* Define font family variable - this will be set by next/font in layout.tsx */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+
+  --radius: 0.75rem;
+  
+  /* OKLCH colors for better color space - Enhanced for futuristic AI theme */
+  --background: 98% 0.01 240;
+  --foreground: 25% 0.01 260;
+  --card: 99% 0.005 240;
+  --card-foreground: 25% 0.01 260;
+  --popover: 99% 0.005 240;
+  --popover-foreground: 25% 0.01 260;
+  --primary: 55% 0.2 250;
+  --primary-foreground: 98% 0 0;
+  --secondary: 90% 0.05 250;
+  --secondary-foreground: 25% 0.01 260;
+  --muted: 95% 0.02 250;
+  --muted-foreground: 60% 0.03 260;
+  --accent: 65% 0.15 270;
+  --accent-foreground: 98% 0 0;
+  --destructive: 50% 0.2 20;
+  --destructive-foreground: 98% 0 0;
+  --border: 90% 0.03 260;
+  --input: 90% 0.03 260;
+  --ring: 60% 0.15 250;
+  
+  /* Chart colors in OKLCH - Enhanced for better visualization */
+  --chart-1: 65% 0.25 40;
+  --chart-2: 60% 0.18 185;
+  --chart-3: 40% 0.15 225;
+  --chart-4: 80% 0.22 85;
+  --chart-5: 75% 0.22 70;
+
+  /* AI theme specific colors */
+  --ai-blue: 60% 0.18 250;
+  --ai-purple: 65% 0.2 280;
+  --ai-cyan: 70% 0.15 200;
+  --ai-green: 70% 0.18 150;
+  --ai-yellow: 80% 0.15 90;
+  --ai-red: 65% 0.2 30;
+  
+  /* Glow effects */
+  --glow-primary: 0 0 15px oklch(var(--primary) / 0.5);
+  --glow-accent: 0 0 15px oklch(var(--accent) / 0.5);
+  --glow-blue: 0 0 15px oklch(var(--ai-blue) / 0.5);
+  
+  /* Enhanced 3D effects */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* Holographic effects */
+  --holographic-gradient: linear-gradient(135deg, 
+    oklch(70% 0.2 200) 0%, 
+    oklch(65% 0.2 250) 25%, 
+    oklch(60% 0.2 280) 50%, 
+    oklch(65% 0.2 320) 75%, 
+    oklch(70% 0.2 200) 100%);
+}
+
+/**
+ * Dark mode theme variables - Enhanced for futuristic AI theme
+ */
+.dark {
+  --background: 8% 0.01 260;
+  --foreground: 95% 0.01 240;
+  --card: 12% 0.02 260;
+  --card-foreground: 95% 0.01 240;
+  --popover: 12% 0.02 260;
+  --popover-foreground: 95% 0.01 240;
+  --primary: 65% 0.2 250;
+  --primary-foreground: 98% 0 0;
+  --secondary: 20% 0.05 250;
+  --secondary-foreground: 98% 0 0;
+  --muted: 20% 0.03 250;
+  --muted-foreground: 70% 0.05 240;
+  --accent: 60% 0.18 270;
+  --accent-foreground: 98% 0 0;
+  --destructive: 60% 0.2 20;
+  --destructive-foreground: 98% 0 0;
+  --border: 30% 0.03 260;
+  --input: 30% 0.03 260;
+  --ring: 70% 0.15 250;
+  
+  /* Glow effects - enhanced for dark mode */
+  --glow-primary: 0 0 20px oklch(var(--primary) / 0.6);
+  --glow-accent: 0 0 20px oklch(var(--accent) / 0.6);
+  --glow-blue: 0 0 20px oklch(var(--ai-blue) / 0.6);
+  
+  /* Enhanced shadows for dark mode */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.3), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+  
+  /* Holographic effects for dark mode */
+  --holographic-gradient: linear-gradient(135deg, 
+    oklch(60% 0.2 200) 0%, 
+    oklch(55% 0.2 250) 25%, 
+    oklch(50% 0.2 280) 50%, 
+    oklch(55% 0.2 320) 75%, 
+    oklch(60% 0.2 200) 100%);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: rgb(var(--ring) / 0.5);
+  }
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(circle at 100% 0%, oklch(var(--primary) / 0.05) 0%, transparent 25%),
+      radial-gradient(circle at 0% 100%, oklch(var(--accent) / 0.05) 0%, transparent 25%);
+  }
+  
+  /* Improved focus styles for accessibility */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+  
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: oklch(var(--background));
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: oklch(var(--muted));
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: oklch(var(--muted-foreground));
+  }
+  
+  /* Selection styling */
+  ::selection {
+    background: oklch(var(--primary) / 0.2);
+    color: oklch(var(--primary));
+  }
+}
+
+/* Handle reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Futuristic UI Components */
+@layer components {
+  /* Glowing elements */
+  .glow-text {
+    text-shadow: 0 0 8px oklch(var(--primary) / 0.7);
+  }
+  
+  .glow-border {
+    box-shadow: 0 0 10px oklch(var(--primary) / 0.5);
+    border: 1px solid oklch(var(--primary));
+  }
+  
+  /* Futuristic cards */
+  .card-futuristic {
+    background: linear-gradient(135deg, oklch(var(--card)) 0%, oklch(var(--card) / 0.8) 100%);
+    backdrop-filter: blur(10px);
+    border: 1px solid oklch(var(--border) / 0.5);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Glassmorphism effect */
+  .glass {
+    background: oklch(var(--background) / 0.7);
+    backdrop-filter: blur(10px);
+    border: 1px solid oklch(var(--border) / 0.3);
+  }
+  
+  /* Futuristic buttons */
+  .btn-futuristic {
+    background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--accent)) 100%);
+    transition: all 0.3s ease;
+    box-shadow: var(--glow-primary);
+  }
+  
+  .btn-futuristic:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--glow-accent);
+  }
+  
+  /* Animated progress bar */
+  .progress-futuristic {
+    background: linear-gradient(90deg, 
+      oklch(var(--primary)) 0%, 
+      oklch(var(--accent)) 50%, 
+      oklch(var(--primary)) 100%);
+    background-size: 200% 100%;
+    animation: progress-animation 2s linear infinite;
+  }
+  
+  @keyframes progress-animation {
+    0% { background-position: 100% 0; }
+    100% { background-position: 0 0; }
+  }
+  
+  /* Futuristic text gradients */
+  .text-gradient {
+    background: linear-gradient(135deg, oklch(var(--primary)) 0%, oklch(var(--accent)) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-fill-color: transparent;
+  }
+  
+  /* Animated borders */
+  .border-pulse {
+    position: relative;
+  }
+  
+  .border-pulse::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid oklch(var(--primary) / 0.5);
+    border-radius: inherit;
+    animation: border-pulse 2s infinite;
+    pointer-events: none;
+  }
+  
+  @keyframes border-pulse {
+    0% { opacity: 1; transform: scale(1); }
+    70% { opacity: 0; transform: scale(1.05); }
+    100% { opacity: 0; transform: scale(1.1); }
+  }
+  
+  /* Holographic card effect */
+  .card-holographic {
+    background: var(--holographic-gradient);
+    background-size: 200% 200%;
+    animation: holographic-shift 5s ease infinite;
+    border-radius: var(--radius);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .card-holographic::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+      oklch(100% 0 0 / 0.2) 0%, 
+      oklch(100% 0 0 / 0) 50%, 
+      oklch(100% 0 0 / 0.2) 100%);
+    z-index: 1;
+    transform: translateY(-100%);
+    animation: holographic-shine 3s ease-in-out infinite;
+  }
+  
+  @keyframes holographic-shift {
+    0% { background-position: 0% 0%; }
+    50% { background-position: 100% 100%; }
+    100% { background-position: 0% 0%; }
+  }
+  
+  @keyframes holographic-shine {
+    0% { transform: translateY(-100%) rotate(35deg); }
+    30% { transform: translateY(100%) rotate(35deg); }
+    100% { transform: translateY(100%) rotate(35deg); }
+  }
+  
+  /* Neon effect */
+  .neon-text {
+    color: oklch(var(--foreground));
+    text-shadow: 
+      0 0 5px oklch(var(--primary) / 0.5),
+      0 0 10px oklch(var(--primary) / 0.5),
+      0 0 15px oklch(var(--primary) / 0.5),
+      0 0 20px oklch(var(--primary) / 0.5);
+  }
+  
+  .neon-border {
+    border: 1px solid oklch(var(--primary));
+    box-shadow: 
+      0 0 5px oklch(var(--primary) / 0.5),
+      0 0 10px oklch(var(--primary) / 0.5),
+      inset 0 0 5px oklch(var(--primary) / 0.2);
+  }
+  
+  /* Cyberpunk grid background */
+  .cyberpunk-grid {
+    background-image: 
+      linear-gradient(oklch(var(--primary) / 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(var(--primary) / 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-position: center center;
+  }
+  
+  /* Data visualization enhancements */
+  .data-card {
+    border-left: 4px solid oklch(var(--primary));
+    background: oklch(var(--card) / 0.7);
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+  }
+  
+  .data-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-left-color: oklch(var(--accent));
+  }
+  
+  /* AI Fight Club specific components */
+  .ai-card {
+    @apply relative overflow-hidden rounded-lg border;
+    border-color: oklch(var(--border) / 0.5);
+    background: linear-gradient(135deg, 
+      oklch(var(--card)) 0%, 
+      oklch(var(--card) / 0.9) 100%);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  
+  .ai-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--glow-primary);
+    border-color: oklch(var(--primary) / 0.5);
+  }
+  
+  .ai-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg,
+      transparent 0%,
+      oklch(var(--primary) / 0.05) 50%,
+      transparent 100%);
+    transform: translateX(-100%);
+    animation: ai-card-shine 3s ease-in-out infinite;
+  }
+  
+  @keyframes ai-card-shine {
+    0% { transform: translateX(-100%); }
+    20% { transform: translateX(100%); }
+    100% { transform: translateX(100%); }
+  }
+  
+  /* Game round indicator */
+  .round-indicator {
+    @apply flex items-center justify-center rounded-full;
+    width: 3rem;
+    height: 3rem;
+    background: oklch(var(--muted));
+    border: 2px solid oklch(var(--border));
+    transition: all 0.3s ease;
+  }
+  
+  .round-indicator.active {
+    background: oklch(var(--primary));
+    color: oklch(var(--primary-foreground));
+    border-color: oklch(var(--primary));
+    box-shadow: var(--glow-primary);
+    transform: scale(1.1);
+  }
+  
+  .round-indicator.completed {
+    background: oklch(var(--accent));
+    color: oklch(var(--accent-foreground));
+    border-color: oklch(var(--accent));
+  }
+  
+  /* Focus area selection */
+  .focus-area {
+    @apply relative p-4 rounded-lg border cursor-pointer;
+    border-color: oklch(var(--border) / 0.5);
+    background: oklch(var(--card) / 0.8);
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  
+  .focus-area:hover {
+    transform: translateY(-2px);
+    border-color: oklch(var(--primary) / 0.5);
+    box-shadow: var(--shadow-md);
+  }
+  
+  .focus-area.selected {
+    border-color: oklch(var(--primary));
+    box-shadow: var(--glow-primary);
+    background: linear-gradient(135deg,
+      oklch(var(--card)) 0%,
+      oklch(var(--primary) / 0.1) 100%);
+  }
+  
+  /* Assessment progress */
+  .assessment-progress {
+    @apply relative h-2 rounded-full overflow-hidden;
+    background: oklch(var(--muted));
+  }
+  
+  .assessment-progress-bar {
+    @apply absolute top-0 left-0 h-full rounded-full;
+    background: linear-gradient(90deg,
+      oklch(var(--primary)) 0%,
+      oklch(var(--accent)) 100%);
+    transition: width 0.5s cubic-bezier(0.65, 0, 0.35, 1);
+  }
+  
+  /* Results visualization */
+  .results-chart {
+    @apply relative p-6 rounded-lg border;
+    border-color: oklch(var(--border) / 0.5);
+    background: oklch(var(--card) / 0.8);
+    backdrop-filter: blur(8px);
+  }
+  
+  .results-chart::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg,
+      oklch(var(--primary)) 0%,
+      oklch(var(--accent)) 100%);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  
+  /* Timer component */
+  .timer {
+    @apply flex items-center justify-center rounded-full;
+    width: 4rem;
+    height: 4rem;
+    background: oklch(var(--card));
+    border: 2px solid oklch(var(--border));
+    box-shadow: var(--shadow-md);
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .timer::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: conic-gradient(
+      oklch(var(--primary)) var(--progress, 0%),
+      transparent var(--progress, 0%)
+    );
+    transition: --progress 1s linear;
+  }
+  
+  .timer::after {
+    content: '';
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    background: oklch(var(--card));
+    border-radius: 50%;
+    z-index: 1;
+  }
+  
+  .timer-text {
+    position: relative;
+    z-index: 2;
+    font-weight: bold;
+  }
+  
+  /* Challenge card */
+  .challenge-card {
+    @apply relative p-6 rounded-lg border overflow-hidden;
+    border-color: oklch(var(--border) / 0.5);
+    background: linear-gradient(135deg,
+      oklch(var(--card)) 0%,
+      oklch(var(--card) / 0.9) 100%);
+    backdrop-filter: blur(8px);
+    transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  
+  .challenge-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--glow-primary);
+    border-color: oklch(var(--primary) / 0.5);
+  }
+  
+  .challenge-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(180deg,
+      oklch(var(--primary)) 0%,
+      oklch(var(--accent)) 100%);
+  }
+}
+
+/* Animations */
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
+@keyframes rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 3s ease-in-out infinite;
+}
+
+.animate-rotate {
+  animation: rotate 10s linear infinite;
+}
+
+.animate-shimmer {
+  background: linear-gradient(90deg,
+    oklch(var(--background)) 0%,
+    oklch(var(--muted)) 20%,
+    oklch(var(--background)) 40%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s infinite;
+}
+
+/* Responsive design utilities */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  
+  .glass-container {
+    @apply bg-background/80 backdrop-blur-md border rounded-lg shadow-lg;
+    border-color: oklch(var(--border) / 0.5);
+  }
+  
+  .futuristic-panel {
+    @apply relative bg-card rounded-lg border shadow-lg overflow-hidden;
+    border-color: oklch(var(--border) / 0.5);
+  }
+  
+  .futuristic-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: linear-gradient(90deg, oklch(var(--primary)), oklch(var(--accent)));
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .mobile-friendly-card {
+      @apply p-3 rounded-md;
+    }
+    
+    .mobile-friendly-text {
+      @apply text-sm;
+    }
+    
+    .mobile-stack {
+      @apply flex-col;
+    }
+  }
+  
+  /* Tablet optimizations */
+  @media (min-width: 641px) and (max-width: 1024px) {
+    .tablet-friendly-layout {
+      @apply grid grid-cols-2 gap-4;
+    }
+  }
+  
+  /* Desktop optimizations */
+  @media (min-width: 1025px) {
+    .desktop-enhanced-layout {
+      @apply grid grid-cols-3 gap-6;
+    }
+  }
+  
+  /* Touch device optimizations */
+  @media (hover: none) {
+    .touch-friendly {
+      @apply p-4;
+    }
+    
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+}

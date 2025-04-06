@@ -1,0 +1,4 @@
+
+> fightclub-frontend@0.1.0 start
+> pkill -f node || true && rm -rf .next node_modules/.cache && next dev -p 3333
+
