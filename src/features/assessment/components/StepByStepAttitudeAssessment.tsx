@@ -75,7 +75,8 @@ export function StepByStepAttitudeAssessment() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<number, number>>({});
   
-  const updateAttitudes = useGameStore(state => state.updateAttitudes);
+  // Fix: Use saveAttitudes instead of updateAttitudes
+  const saveAttitudes = useGameStore(state => state.saveAttitudes);
   
   const currentQuestion = attitudeQuestions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / attitudeQuestions.length) * 100;
@@ -100,8 +101,17 @@ export function StepByStepAttitudeAssessment() {
         development: answers[5] || 3
       };
       
-      // Update game state
-      updateAttitudes(attitudeScores);
+      // Convert to AiAttitude array format expected by saveAttitudes
+      const aiAttitudes = [
+        { id: '1', attitude: 'creativity', strength: attitudeScores.creativity, description: 'AI in creative fields' },
+        { id: '2', attitude: 'jobs', strength: attitudeScores.jobs, description: 'AI impact on jobs' },
+        { id: '3', attitude: 'decisions', strength: attitudeScores.decisions, description: 'AI in decision-making' },
+        { id: '4', attitude: 'privacy', strength: attitudeScores.privacy, description: 'AI impact on privacy' },
+        { id: '5', attitude: 'development', strength: attitudeScores.development, description: 'Pace of AI development' }
+      ];
+      
+      // Update game state using saveAttitudes instead of updateAttitudes
+      saveAttitudes(aiAttitudes);
       
       // Navigate to next phase
       router.push('/focus');
