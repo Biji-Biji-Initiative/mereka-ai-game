@@ -137,6 +137,8 @@ export function Round3() {
   // Handle continuing to results page after evaluation
   const handleContinue = useCallback(() => {
     setShowEvaluation(false);
+    // Set game phase to RESULTS
+    useGameStore.getState().setGamePhase(useGameStore.getState().GamePhase.RESULTS);
     router.push('/results');
   }, [router]);
   

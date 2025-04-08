@@ -104,6 +104,8 @@ export default function Round2() {
   // Handle continuing to next round after evaluation
   const handleContinue = useCallback(() => {
     setShowEvaluation(false);
+    // Set game phase to ROUND3
+    useGameStore.getState().setGamePhase(useGameStore.getState().GamePhase.ROUND3);
     router.push('/round3');
   }, [router]);
   
