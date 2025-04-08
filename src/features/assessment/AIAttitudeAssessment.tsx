@@ -106,9 +106,9 @@ export default function AIAttitudeAssessment() {
       // Save all attitudes to the store at once
       saveAttitudes(storeAttitudes);
       
-      // Remove manual phase setting and navigation - handled by store action + navigator
-      // setGamePhase(GamePhase.FOCUS);
-      // router.push('/focus');
+      // Set game phase to FOCUS and navigate
+      setGamePhase(GamePhase.FOCUS);
+      router.push('/focus');
     } catch (error) {
       console.error('Error saving AI attitudes:', error);
     } finally {
