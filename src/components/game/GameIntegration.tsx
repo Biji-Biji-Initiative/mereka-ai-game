@@ -65,27 +65,42 @@ export function GameIntegration() {
     const hasCompletedRound = hasRound1 || hasRound2 || hasRound3;
     
     if (hasCompletedRound) {
-      // Update badges with selected game and rival state
-      const gameStateCopy = useGameStore.getState();
-      const rivalStateCopy = useRivalStore.getState();
-      
-      // Ensure both state objects exist before updating
-      if (gameStateCopy && rivalStateCopy) {
-        updateBadges(gameStateCopy, rivalStateCopy);
+      try {
+        // Update badges with selected game and rival state
+        const gameStateCopy = useGameStore.getState();
+        const rivalStateCopy = useRivalStore.getState();
         
-        // Update leaderboard with latest scores - using mock scores for now
-        if (hasRound1) {
-          updateUserScore('round1', 75);
-        }
-        if (hasRound2) {
-          updateUserScore('round2', 85);
-        }
-        if (hasRound3) {
-          updateUserScore('round3', 95);
-        }
+        // Create a properly formatted game state object for the badge service
+        const formattedGameState = {
+          currentStep: gameStateCopy.gamePhase, // Map to the expected property name
+          roundResults: gameStateCopy.responses || {}, // Map to the expected property name
+          personality: gameStateCopy.personality || {},
+          focus: gameStateCopy.focus || null,
+          // Add any other properties needed by badge service
+        };
         
-        // Update neural network
-        updateNetworkFromGame(gameStateCopy, rivalStateCopy);
+        // Ensure both state objects exist before updating
+        if (gameStateCopy && rivalStateCopy) {
+          // Pass the formatted game state to updateBadges
+          updateBadges(formattedGameState, rivalStateCopy);
+          
+          // Update leaderboard with latest scores - using mock scores for now
+          if (hasRound1) {
+            updateUserScore('round1', 75);
+          }
+          if (hasRound2) {
+            updateUserScore('round2', 85);
+          }
+          if (hasRound3) {
+            updateUserScore('round3', 95);
+          }
+          
+          // Update neural network with formatted game state
+          updateNetworkFromGame(formattedGameState, rivalStateCopy);
+        }
+      } catch (error) {
+        console.error('Error updating game systems:', error);
+        // Gracefully handle the error without breaking the UI
       }
     }
   }, [responses, updateBadges, updateUserScore, updateNetworkFromGame]);
@@ -95,7 +110,11 @@ export function GameIntegration() {
   
   const handleBadgeNotificationClose = () => {
     if (clearRecentlyUnlocked) {
-      clearRecentlyUnlocked();
+      try {
+        clearRecentlyUnlocked();
+      } catch (error) {
+        console.error('Error clearing badge notifications:', error);
+      }
     }
   };
   
