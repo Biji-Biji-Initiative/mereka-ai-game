@@ -32,9 +32,9 @@ export default function Round1() {
   const [showEvaluation, setShowEvaluation] = useState(false);
   
   // Get current game state values and actions with individual selectors
-  const traits = useGameStore(state => state.personality?.traits);
+  const traits = useGameStore(state => state.personality?.traits || []);
   const focus = useGameStore(state => state.focus);
-  const currentChallenge = useGameStore(state => state.responses?.round1);
+  const currentChallenge = useGameStore(state => state.responses?.round1 || {});
   const saveRound1Response = useGameStore(state => state.saveRound1Response);
   const setGamePhase = useGameStore(state => state.setGamePhase);
   const completedPhase = useGameStore(state => state.getIsPhaseCompleted);
@@ -59,7 +59,7 @@ export default function Round1() {
     }
     
     // If we already have a challenge saved in the responses, use that
-    if (currentChallenge?.challenge) {
+    if (currentChallenge.challenge) {
       setChallenge(currentChallenge.challenge || '');
       if (currentChallenge.userResponse) {
         setUserResponse(currentChallenge.userResponse);
@@ -76,7 +76,7 @@ export default function Round1() {
       const apiRequest = {
         focusArea: focus.id,
         personalityContext: {
-          traits: traits || [],
+          traits: traits, // Already has default empty array
         },
         professionalContext: {
           title: 'Professional', // Default value

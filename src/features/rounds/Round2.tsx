@@ -20,28 +20,21 @@ export default function Round2() {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [showEvaluation, setShowEvaluation] = useState(false);
   
-  // Get game store values and actions using the consolidated store
-  const {
-    responses, 
-    focus, 
-    saveRound2Response, 
-    currentChallenge
-  } = useGameStore(state => ({
-    responses: state.responses,
-    focus: state.focus,
-    saveRound2Response: state.saveRound2Response,
-    currentChallenge: state.currentChallenge
-  }));
+  // Get game store values and actions using individual selectors for better type safety
+  const responses = useGameStore(state => state.responses || {});
+  const focus = useGameStore(state => state.focus);
+  const saveRound2Response = useGameStore(state => state.saveRound2Response);
+  const currentChallenge = useGameStore(state => state.currentChallenge);
   
   // Get evaluation function
   const evaluateRound = useEvaluateRound();
   
   // Check if we have round1 response and focus/challenge
-  const round1Data = responses?.round1;
+  const round1Data = responses.round1 || {};
   
   // If no round1 data or focus/challenge, redirect to previous step
   useEffect(() => {
-    if (!round1Data?.userResponse) {
+    if (!round1Data.userResponse) {
       console.warn('Round1 not completed, redirecting to round1');
       router.push('/round1');
       return;

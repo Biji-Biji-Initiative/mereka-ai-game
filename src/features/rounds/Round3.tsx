@@ -21,30 +21,20 @@ export function Round3() {
   const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
   const [showEvaluation, setShowEvaluation] = useState(false);
   
-  // Get game store values and actions
-  const { 
-    personality, 
-    userInfo, 
-    focus, 
-    responses, 
-    currentChallenge,
-    saveRound3Response, 
-    saveProfileId
-  } = useGameStore(state => ({
-    personality: state.personality,
-    userInfo: state.userInfo,
-    focus: state.focus,
-    responses: state.responses,
-    currentChallenge: state.currentChallenge,
-    saveRound3Response: state.saveRound3Response,
-    saveProfileId: state.saveProfileId
-  }));
+  // Get game store values and actions using individual selectors for better type safety
+  const personality = useGameStore(state => state.personality || { traits: [], attitudes: [] });
+  const userInfo = useGameStore(state => state.userInfo || {});
+  const focus = useGameStore(state => state.focus);
+  const responses = useGameStore(state => state.responses || {});
+  const currentChallenge = useGameStore(state => state.currentChallenge);
+  const saveRound3Response = useGameStore(state => state.saveRound3Response);
+  const saveProfileId = useGameStore(state => state.saveProfileId);
   
   // Get evaluation function
   const evaluateRound = useEvaluateRound();
   
   // Check if user has completed round 2 and if we have a current challenge
-  const hasCompletedRound2 = !!responses?.round2?.userResponse;
+  const hasCompletedRound2 = !!(responses.round2 && responses.round2.userResponse);
   
   // Redirect if essential data is missing
   useEffect(() => {
@@ -109,12 +99,12 @@ export function Round3() {
               userResponse: responses.round1.userResponse || '',
               challenge: responses.round1.challenge,
               aiResponse: undefined
-            } : undefined,
+            } : { userResponse: '', challenge: undefined, aiResponse: undefined },
             round2: responses.round2 ? {
               userResponse: responses.round2.userResponse || '',
               challenge: undefined,
               aiResponse: undefined
-            } : undefined,
+            } : { userResponse: '', challenge: undefined, aiResponse: undefined },
             round3: {
               userResponse: userResponse,
               challenge: currentChallenge.description || '',

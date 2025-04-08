@@ -1,179 +1,189 @@
-# Technical Debt and Implementation Issues
+# Mereka AI Game - Technical Debt and Improvement Plan
 
-This document outlines the technical debt and implementation issues identified in the Mereka AI Game codebase, along with recommendations for addressing them. It serves as a guide for future development and refactoring efforts.
+## Overview
 
-## Navigation System Issues
+This document outlines the technical debt identified in the Mereka AI Game codebase and provides a comprehensive plan for addressing these issues. The focus is on refactoring and integrating existing components without creating unnecessary new features, as approximately 95% of the required functionality is already present in the codebase.
 
-### 1. Inconsistent State Access Patterns
+## Technical Debt Categories
 
-**Problem:** Components access state using different property paths than what actually exists in the store.
+### 1. State Management Issues
 
-**Examples:**
-- Round1 component tries to access `state.roundResults.round1` when the actual structure is `state.responses.round1`
-- Components reference `state.traits` instead of `state.personality.traits`
-- Components reference `state.selectedFocus` instead of `state.focus`
+- **Zustand Store Configuration**
+  - `skipHydration: true` in `useGameStore.ts` prevents state restoration from localStorage
+  - Missing comma after the `partialize` function definition
+  - Implicit `any` type for the `state` parameter in the `onRehydrateStorage` function
+  - Complex, deeply nested state structure in `useGameStore`
 
-**Solution:**
-- Standardize state access patterns across all components
-- Create typed selectors for common state access patterns
-- Add proper TypeScript interfaces for all state structures
+- **State Access Patterns**
+  - Inconsistent state access patterns across components
+  - Mismatched property paths (e.g., `state.personality?.traits` vs `state.traits`)
+  - Potential race conditions in state updates during phase transitions
 
-### 2. Mismatched Function Signatures
+### 2. Navigation and Game Flow
 
-**Problem:** Components call store functions with parameters that don't match the function signatures.
+- **Button Navigation Issues**
+  - "View Results" button on Round3 page doesn't navigate properly
+  - Inconsistent navigation patterns between direct URL navigation and button clicks
 
-**Examples:**
-- Round1 component calls `saveRound1Response('round1', { challenge: challengeContent })` with two parameters, but the store implementation expects only one string parameter
+- **Phase Transition Logic**
+  - Lack of proper evaluation between rounds before progression
+  - Insufficient synchronization between URL and game phase state
+  - Missing error recovery to prevent users from getting stuck
 
-**Solution:**
-- Ensure function signatures are consistent between definition and usage
-- Add proper TypeScript typing for all function parameters
-- Consider using a more robust state management pattern like Redux Toolkit or Zustand with proper action creators
+- **UI Inconsistencies**
+  - Some pages show incorrect headings despite being on the correct URL
+  - Inconsistent styling between assessment components
 
-### 3. Direct Store Manipulation
+### 3. Error Handling
 
-**Problem:** Components try to directly manipulate the store state instead of using defined actions.
+- **Error Boundaries**
+  - Incomplete implementation of error boundaries across all components
+  - Lack of fallback UI for error states in some components
 
-**Examples:**
-- Components using `set` directly or trying to update nested state properties directly
-- Using `setTimeout` to update store state, creating temporal coupling
+- **Error Reporting**
+  - Insufficient error messages and logging
+  - Inconsistent error handling patterns across the codebase
 
-**Solution:**
-- Always use defined store actions for state updates
-- Create more granular actions for specific state updates
-- Implement proper middleware for side effects instead of using setTimeout
+- **Null Checking**
+  - Missing null/undefined checks in critical operations
+  - "Cannot read properties of undefined" errors in various components
 
-### 4. Improper Phase Transition Logic
+### 4. Integration Points
 
-**Problem:** Navigation between phases isn't consistently implemented.
+- **Badge Service**
+  - Errors in the GameIntegration badge service
+  - Incorrect state formatting for badge service
 
-**Examples:**
-- Some components handle navigation directly with `router.push()`
-- Others rely on the store to update the phase
-- Inconsistent checks for phase completion
+- **Challenge Generation**
+  - Issues with challenge generation logic
+  - Incorrect API call handling
 
-**Solution:**
-- Centralize navigation logic in the GamePhaseNavigator
-- Make GamePhaseWrapper the single source of truth for phase transitions
-- Implement a consistent pattern for phase completion checks
+- **Authentication**
+  - Incomplete Google sign-in integration
+  - Empty `game-progress.ts` file in auth directory
 
-## Component Architecture Issues
+- **Results Sharing**
+  - Incomplete implementation of results sharing functionality
 
-### 1. Lack of Error Boundaries
+### 5. Testing and Documentation
 
-**Problem:** No proper error handling for when data is missing or API calls fail.
+- **Unit Tests**
+  - Insufficient test coverage for critical components
+  - Missing tests for state management logic
 
-**Examples:**
-- Uncaught exceptions when trying to access properties of undefined objects
-- No fallback UI when components fail to render
+- **Documentation**
+  - Outdated or incomplete documentation
+  - Missing API documentation for mock services
 
-**Solution:**
-- Implement error boundaries around all major components
-- Add proper error handling for API calls
-- Provide fallback UI for error states
+## Improvement Plan
 
-### 2. Inconsistent Completion Checking
+### Phase 1: Core Game Flow Stabilization (Completed)
 
-**Problem:** The code uses different methods to check if a phase is completed.
+- ✅ Fix navigation system with proper error handling and phase completion checks
+- ✅ Implement consistent round evaluation system across all rounds
+- ✅ Fix import path issues
+- ✅ Verify preselected options across all assessment components
 
-**Examples:**
-- Sometimes checking an array of completed steps: `completedSteps.includes('focus')`
-- Other times using a function: `completedPhase(GamePhase.FOCUS)`
+### Phase 2: State Management Refactoring
 
-**Solution:**
-- Standardize on a single method for checking phase completion
-- Use the `getIsPhaseCompleted` function consistently across all components
+- **Priority: High**
+- **Timeline: 1-2 days**
 
-### 3. Temporal Coupling
+1. Fix Zustand store configuration:
+   - Remove `skipHydration: true` from `useGameStore.ts`
+   - Add missing comma after the `partialize` function
+   - Provide explicit type for the `state` parameter in `onRehydrateStorage`
 
-**Problem:** Using `setTimeout` to update the store after setting local state creates temporal coupling and race conditions.
+2. Standardize state access patterns:
+   - Ensure consistent property paths across components
+   - Add proper null checks for all state access
+   - Implement loading states for asynchronous operations
 
-**Examples:**
-- `setTimeout(() => { saveRound1Response('round1', { challenge: challengeContent }); }, 0);`
+3. Improve state update logic:
+   - Add proper error handling for state updates
+   - Implement atomic updates to prevent race conditions
+   - Add validation for state transitions
 
-**Solution:**
-- Remove all setTimeout calls for state updates
-- Use proper async/await patterns for sequential operations
-- Consider using a state management library with middleware support for side effects
+### Phase 3: Error Handling Enhancement
 
-### 4. Poor Type Safety
+- **Priority: Medium**
+- **Timeline: 1 day**
 
-**Problem:** Many parts of the code don't properly leverage TypeScript's type system.
+1. Implement comprehensive error boundaries:
+   - Add error boundaries to all page components
+   - Create consistent fallback UI for error states
+   - Implement graceful degradation for all critical operations
 
-**Examples:**
-- Using `as` casts instead of proper type definitions
-- Missing type annotations for function parameters and return values
+2. Enhance error reporting:
+   - Add detailed error messages and logging
+   - Implement consistent error handling patterns
+   - Create a centralized error reporting mechanism
 
-**Solution:**
-- Add proper TypeScript interfaces for all data structures
-- Use generics for reusable components and functions
-- Avoid type assertions (`as`) in favor of proper type guards
+### Phase 4: Feature Integration
 
-### 5. Violation of Single Responsibility Principle
+- **Priority: Medium**
+- **Timeline: 2-3 days**
 
-**Problem:** Components are handling too many concerns.
+1. Complete badge service integration:
+   - Fix state formatting for badge service
+   - Implement proper error handling for badge service
+   - Ensure badges are correctly awarded based on user performance
 
-**Examples:**
-- Components handling data fetching, state management, navigation, and UI rendering
-- Large useEffect hooks with multiple responsibilities
+2. Finalize Google sign-in:
+   - Complete the implementation of Google sign-in
+   - Integrate authentication with game progress
+   - Implement proper error handling for authentication
 
-**Solution:**
-- Split components into smaller, focused components
-- Extract data fetching logic into custom hooks
-- Separate UI rendering from business logic
+3. Implement results sharing:
+   - Complete the implementation of results sharing functionality
+   - Add social media sharing options
+   - Ensure proper formatting of shared results
 
-## Next.js 15 Specific Issues
+4. Integrate leaderboard functionality:
+   - Ensure leaderboard data is correctly displayed
+   - Implement filtering options (global, similar-profile, focus-specific)
+   - Add time-based filtering (daily, weekly, monthly, all-time)
 
-### 1. Improper Use of Client Components
+### Phase 5: Testing and Documentation
 
-**Problem:** Overuse of client components when server components would be more efficient.
+- **Priority: Low**
+- **Timeline: 1-2 days**
 
-**Solution:**
-- Convert appropriate components to server components
-- Use the "use client" directive only when necessary
-- Leverage React Server Components for data fetching
+1. Implement comprehensive testing:
+   - Add unit tests for critical components
+   - Implement integration tests for game flow
+   - Add end-to-end tests for the complete user journey
 
-### 2. Inefficient Data Fetching
+2. Update documentation:
+   - Create comprehensive API documentation
+   - Update technical debt documentation
+   - Create user documentation for the game
 
-**Problem:** Components fetch data on the client side that could be fetched during server rendering.
+## Implementation Strategy
 
-**Solution:**
-- Use Next.js data fetching methods like `getServerSideProps` or the new App Router data fetching
-- Implement proper caching strategies
-- Consider using React Query or SWR for client-side data fetching
+1. **Minimal Changes Approach**:
+   - Focus on fixing existing code rather than creating new components
+   - Leverage the existing 95% of functionality
+   - Only create new components when absolutely necessary
 
-### 3. Missing Error and Loading States
+2. **Incremental Refactoring**:
+   - Address issues in small, manageable chunks
+   - Test thoroughly after each change
+   - Commit changes regularly with descriptive messages
 
-**Problem:** Many components don't properly handle loading and error states.
+3. **Prioritization**:
+   - Focus on critical issues that affect core functionality first
+   - Address user-facing issues before internal refactoring
+   - Tackle technical debt that impacts maintainability
 
-**Solution:**
-- Implement consistent loading indicators
-- Add error boundaries and error states
-- Use React Suspense for loading states where appropriate
+## Commit Strategy
 
-## Recommendations for Improvement
+All significant changes will be committed to the repository using the provided GitHub token. Each commit will include:
 
-### Short-term Fixes
-
-1. **Fix State Access Patterns**: Update all components to use the correct state access patterns
-2. **Implement Error Boundaries**: Add error boundaries to all page components
-3. **Standardize Navigation Logic**: Ensure all navigation goes through the GamePhaseNavigator
-4. **Fix Function Signatures**: Update all function calls to match their definitions
-
-### Medium-term Improvements
-
-1. **Refactor State Management**: Consider migrating to a more robust state management solution
-2. **Improve Type Safety**: Add comprehensive TypeScript interfaces and reduce type assertions
-3. **Extract Business Logic**: Move business logic out of components into custom hooks
-4. **Add Comprehensive Testing**: Implement unit and integration tests for critical paths
-
-### Long-term Architecture Changes
-
-1. **Adopt Server Components**: Leverage Next.js 15's server component architecture
-2. **Implement Domain-Driven Design**: Organize code by domain rather than technical concerns
-3. **Add Feature Flags**: Implement feature flags for safer deployments
-4. **Improve Error Monitoring**: Add proper error tracking and monitoring
+1. A descriptive commit message explaining the changes
+2. Reference to the specific issue or technical debt being addressed
+3. Documentation updates reflecting the changes made
 
 ## Conclusion
 
-Addressing these technical debt issues will improve the maintainability, reliability, and performance of the Mereka AI Game application. By following Next.js 15 best practices and proper software engineering principles, the codebase will be more robust and easier to extend in the future.
+By following this improvement plan, we will stabilize the Mereka AI Game codebase, making it more maintainable and functional. The focus will be on refactoring and integrating existing components without creating unnecessary new features, as approximately 95% of the required functionality is already present in the codebase.
