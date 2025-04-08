@@ -105,7 +105,8 @@ export default function Round2() {
   const handleContinue = useCallback(() => {
     setShowEvaluation(false);
     // Set game phase to ROUND3
-    useGameStore.getState().setGamePhase(useGameStore.getState().GamePhase.ROUND3);
+    const { setGamePhase, GamePhase } = useGameStore.getState();
+    setGamePhase(GamePhase.ROUND3);
     router.push('/round3');
   }, [router]);
   
