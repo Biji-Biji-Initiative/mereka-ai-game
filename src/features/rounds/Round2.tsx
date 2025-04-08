@@ -105,7 +105,8 @@ export default function Round2() {
   const handleContinue = useCallback(() => {
     setShowEvaluation(false);
     // Set game phase to ROUND3
-    const { setGamePhase, GamePhase } = useGameStore.getState();
+    const setGamePhase = useGameStore(state => state.setGamePhase);
+    const GamePhase = useGameStore(state => state.GamePhase);
     setGamePhase(GamePhase.ROUND3);
     router.push('/round3');
   }, [router]);
@@ -121,22 +122,16 @@ export default function Round2() {
     );
   }
 
-  // Safely access potential AI response and prompts from challenge object
-  const aiResponseForRound2 = currentChallenge.aiResponseForRound2 || "AI's approach is not available for this challenge.";
-  const round2Prompt = currentChallenge.round2Prompt || "Now let's see how AI would approach your challenge. Review the AI's response and consider where your human edge provides advantages.";
-  const round2Placeholder = currentChallenge.round2Placeholder || "Compare your approach with the AI's. Where do you see your human edge?";
-  const round1ChallengeDescription = currentChallenge.description || round1Data?.challenge || "Challenge description not available";
-
   return (
     <div className="space-y-8">
     {!showEvaluation ? (
       <Card className="w-full max-w-4xl mx-auto shadow-lg">
         <CardHeader>
           <CardTitle className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-            Round 2: AI's Response & Your Analysis
+            Round 2 Challenge
           </CardTitle>
           <CardDescription>
-            {typeof round2Prompt === 'string' ? round2Prompt : ''}
+            Now let's see how AI would approach your challenge. Review the AI's response and consider where your human edge provides advantages.
           </CardDescription>
         </CardHeader>
         
@@ -145,7 +140,7 @@ export default function Round2() {
             <h3 className="font-semibold text-lg mb-3">Your Challenge Scenario:</h3>
             <div className="border p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 mb-4">
               <p className="text-gray-800 dark:text-gray-200">
-                {round1ChallengeDescription || ''}
+                {currentChallenge.description || round1Data?.challenge || "Challenge description not available"}
               </p>
             </div>
             
@@ -160,7 +155,7 @@ export default function Round2() {
           <div className="border-l-4 border-indigo-500 pl-4 py-3 bg-gray-50 dark:bg-gray-800">
             <h3 className="font-semibold text-lg mb-2">AI's Approach:</h3>
             <p className="text-gray-800 dark:text-gray-200">
-              {typeof aiResponseForRound2 === 'string' ? aiResponseForRound2 : ''}
+              {currentChallenge.aiResponseForRound2 || "AI's approach is not available for this challenge."}
             </p>
           </div>
           
@@ -169,7 +164,7 @@ export default function Round2() {
             <Textarea 
               value={userAnalysis}
               onChange={(e) => setUserAnalysis(e.target.value)}
-              placeholder={typeof round2Placeholder === 'string' ? round2Placeholder : ''}
+              placeholder="Compare your approach with the AI's. Where do you see your human edge?"
               className="min-h-[150px] resize-y"
             />
             <p className="text-sm text-gray-500 dark:text-gray-400">
