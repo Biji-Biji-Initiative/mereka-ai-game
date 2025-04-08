@@ -27,12 +27,12 @@ export default function Round1() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Get current game state values and actions with individual selectors
-  const traits = useGameStore(state => state.traits);
-  const focus = useGameStore(state => state.selectedFocus);
-  const currentChallenge = useGameStore(state => state.roundResults.round1);
-  const saveRound1Response = useGameStore(state => state.setRoundResult);
-  const setCurrentStep = useGameStore(state => state.setCurrentStep);
-  const completedSteps = useGameStore(state => state.completedSteps);
+  const traits = useGameStore(state => state.personality?.traits);
+  const focus = useGameStore(state => state.focus);
+  const currentChallenge = useGameStore(state => state.responses?.round1);
+  const saveRound1Response = useGameStore(state => state.saveRound1Response);
+  const setGamePhase = useGameStore(state => state.setGamePhase);
+  const completedPhase = useGameStore(state => state.getIsPhaseCompleted);
   
   // Generate challenge mutation
   const generateChallengeMutation = useGenerateChallenge();
@@ -40,6 +40,9 @@ export default function Round1() {
   // Submit response mutation
   const submitResponseMutation = useSubmitResponse();
   
+  // Import additional store actions
+  const saveChallenge = useGameStore(state => state.saveChallenge);
+
   // Generate a challenge based on the user's traits and focus area
   const generateChallenge = useCallback(async () => {
     if (!focus) {
@@ -47,9 +50,12 @@ export default function Round1() {
       return;
     }
     
-    // If we already have a challenge saved in the roundResults, use that
+    // If we already have a challenge saved in the responses, use that
     if (currentChallenge?.challenge) {
-      setChallenge(currentChallenge.challenge);
+      setChallenge(currentChallenge.challenge || '');
+      if (currentChallenge.userResponse) {
+        setUserResponse(currentChallenge.userResponse);
+      }
       setIsLoading(false);
       return;
     }
@@ -81,11 +87,9 @@ export default function Round1() {
         // Set local state for display
         setChallenge(challengeContent || '');
         
-        // Save challenge to game state - but don't include this in the dependencies array
-        // to prevent infinite loops
-        setTimeout(() => {
-          saveRound1Response('round1', { challenge: challengeContent });
-        }, 0);
+        // Update the store with just the challenge content using the proper store action
+        // We'll add the user response when they submit
+        saveChallenge(1, challengeContent);
       } else {
         throw new Error('Failed to generate challenge');
       }
@@ -94,13 +98,13 @@ export default function Round1() {
     } finally {
       setIsLoading(false);
     }
-  }, [focus, traits, currentChallenge, generateChallengeMutation]); // Removed saveRound1Response from dependencies
+  }, [focus, traits, currentChallenge, generateChallengeMutation, saveChallenge]);
   
   // Generate challenge on component mount, but first check prerequisites are met
   useEffect(() => {
-    // Check if the 'focus' step is in the completedSteps
-    if (!completedSteps.includes('focus')) {
-      console.warn('Focus step not completed, redirecting to focus page');
+    // Check if the focus phase is completed
+    if (!completedPhase(GamePhase.FOCUS)) {
+      console.warn('Focus phase not completed, redirecting to focus page');
       router.push('/focus');
       return;
     }
@@ -116,7 +120,7 @@ export default function Round1() {
     console.log('Prerequisites met, generating challenge');
     void generateChallenge();
     
-  }, [focus, completedSteps, generateChallenge, router]);
+  }, [focus, completedPhase, generateChallenge, router]);
   
   // State for AI thinking visualization
   const [showAiThinking, setShowAiThinking] = useState(false);
@@ -141,17 +145,15 @@ export default function Round1() {
       // Submit response to API
       await submitResponseMutation.mutateAsync(submissionRequest);
       
-      // Save response to game state
-      saveRound1Response('round1', { 
-        challenge: challenge,
-        userResponse: userResponse 
-      });
+      // Save response to game state using the correct store action
+      saveRound1Response(userResponse);
+      
+      // Set game phase to ROUND2 after successful submission
+      setGamePhase(GamePhase.ROUND2);
       
       // Simulate AI thinking time
       setTimeout(() => {
         setShowAiThinking(false);
-        // Set next step
-        setCurrentStep('round2');
         // Navigate to next round
         router.push('/round2');
       }, 3000);
