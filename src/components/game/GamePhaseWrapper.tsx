@@ -3,6 +3,8 @@
 import { ReactNode, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGameStore, GamePhase, useIsPhaseCompleted } from '@/store/useGameStore';
+import { useErrorHandler } from '@/lib/error/ErrorHandlers';
+import { PageErrorBoundary } from '@/components/error/PageErrorBoundary';
 
 interface GamePhaseWrapperProps {
   children: ReactNode;
@@ -14,11 +16,12 @@ interface GamePhaseWrapperProps {
  * This component centralizes the game phase logic so it doesn't need to be
  * repeated in every page component
  * 
- * Refactored to follow Next.js 15 best practices and single responsibility principle.
+ * Enhanced with error handling and graceful degradation for Phase 3
  */
-export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWrapperProps) {
+function GamePhaseWrapperContent({ children, targetPhase }: GamePhaseWrapperProps) {
   const { gamePhase, setGamePhase } = useGameStore();
   const router = useRouter();
+  const { handleError, handleWarning, handleInfo } = useErrorHandler('GamePhaseWrapper');
   
   // Check if prerequisites are completed
   const isContextCompleted = useIsPhaseCompleted(GamePhase.CONTEXT);
@@ -33,28 +36,37 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
    * Only set the phase if coming from a direct navigation (refresh, direct URL entry)
    */
   useEffect(() => {
-    console.log(`GamePhaseWrapper: current=${gamePhase}, target=${targetPhase}`);
-    
-    // Set the phase if coming from WELCOME (initial state) or storage rehydration
-    if (gamePhase === GamePhase.WELCOME && targetPhase !== GamePhase.WELCOME) {
-      console.log(`GamePhaseWrapper: Setting phase to ${targetPhase} from initial state`);
-      setGamePhase(targetPhase);
-    }
-    
-    // Handle direct URL navigation to a page that doesn't match current phase
-    // This ensures the game phase is synchronized with the URL
-    if (gamePhase !== targetPhase && targetPhase !== GamePhase.WELCOME) {
-      // Check if we're navigating forward (to a phase that comes after the current one)
-      const isForwardNavigation = Object.values(GamePhase).indexOf(targetPhase) > 
-                                 Object.values(GamePhase).indexOf(gamePhase);
+    try {
+      handleInfo(`GamePhaseWrapper: current=${gamePhase}, target=${targetPhase}`);
       
-      // Only update phase if navigating forward or if we're on the welcome page
-      if (isForwardNavigation || gamePhase === GamePhase.WELCOME) {
-        console.log(`GamePhaseWrapper: Synchronizing phase to match URL: ${targetPhase}`);
+      // Set the phase if coming from WELCOME (initial state) or storage rehydration
+      if (gamePhase === GamePhase.WELCOME && targetPhase !== GamePhase.WELCOME) {
+        handleInfo(`Setting phase to ${targetPhase} from initial state`);
         setGamePhase(targetPhase);
       }
+      
+      // Handle direct URL navigation to a page that doesn't match current phase
+      // This ensures the game phase is synchronized with the URL
+      if (gamePhase !== targetPhase && targetPhase !== GamePhase.WELCOME) {
+        // Check if we're navigating forward (to a phase that comes after the current one)
+        const isForwardNavigation = Object.values(GamePhase).indexOf(targetPhase) > 
+                                   Object.values(GamePhase).indexOf(gamePhase);
+        
+        // Only update phase if navigating forward or if we're on the welcome page
+        if (isForwardNavigation || gamePhase === GamePhase.WELCOME) {
+          handleInfo(`Synchronizing phase to match URL: ${targetPhase}`);
+          setGamePhase(targetPhase);
+        }
+      }
+    } catch (error) {
+      handleError(error, { 
+        context: 'phase-initialization', 
+        currentPhase: gamePhase, 
+        targetPhase 
+      });
+      // Graceful degradation: still render children even if phase sync fails
     }
-  }, [gamePhase, setGamePhase, targetPhase]);
+  }, [gamePhase, setGamePhase, targetPhase, handleError, handleInfo]);
   
   /**
    * Effect 2: Handle prerequisite checks and redirects
@@ -69,7 +81,7 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
     try {
       // Context is required for all phases after WELCOME
       if (!isContextCompleted) {
-        console.log('Prerequisites not met: Context not completed, redirecting...');
+        handleInfo('Prerequisites not met: Context not completed, redirecting...');
         router.push('/context');
         return;
       }
@@ -82,14 +94,14 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
           targetPhase === GamePhase.RESULTS) {
         
         if (!isTraitsCompleted) {
-          console.log('Prerequisites not met: Traits not completed, redirecting...');
+          handleInfo('Prerequisites not met: Traits not completed, redirecting...');
           router.push('/traits');
           return;
         }
         
         // Attitudes are required for FOCUS and beyond (except when on the attitudes page)
         if (!isAttitudesCompleted && targetPhase !== GamePhase.ATTITUDES) {
-          console.log('Prerequisites not met: Attitudes not completed, redirecting...');
+          handleInfo('Prerequisites not met: Attitudes not completed, redirecting...');
           router.push('/attitudes');
           return;
         }
@@ -102,7 +114,7 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
           targetPhase === GamePhase.RESULTS) {
         
         if (!isFocusCompleted) {
-          console.log('Prerequisites not met: Focus not completed, redirecting...');
+          handleInfo('Prerequisites not met: Focus not completed, redirecting...');
           router.push('/focus');
           return;
         }
@@ -114,7 +126,7 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
           targetPhase === GamePhase.RESULTS) {
         
         if (!isRound1Completed) {
-          console.log('Prerequisites not met: Round 1 not completed, redirecting...');
+          handleInfo('Prerequisites not met: Round 1 not completed, redirecting...');
           router.push('/round1');
           return;
         }
@@ -123,15 +135,28 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
       // Round2 is required for ROUND3 and RESULTS
       if (targetPhase === GamePhase.ROUND3 || targetPhase === GamePhase.RESULTS) {
         if (!isRound2Completed) {
-          console.log('Prerequisites not met: Round 2 not completed, redirecting...');
+          handleInfo('Prerequisites not met: Round 2 not completed, redirecting...');
           router.push('/round2');
           return;
         }
       }
     } catch (error) {
-      console.error('Error in prerequisite checks:', error);
-      // If there's an error in the prerequisite checks, we should still allow navigation
-      // to prevent users from getting stuck
+      handleError(error, { 
+        context: 'prerequisite-checks', 
+        targetPhase,
+        completionStatus: {
+          context: isContextCompleted,
+          traits: isTraitsCompleted,
+          attitudes: isAttitudesCompleted,
+          focus: isFocusCompleted,
+          round1: isRound1Completed,
+          round2: isRound2Completed
+        }
+      });
+      
+      // Graceful degradation: If there's an error in prerequisite checks,
+      // we should still allow navigation to prevent users from getting stuck
+      handleWarning('Error in prerequisite checks, allowing navigation to continue');
     }
   }, [
     targetPhase, 
@@ -141,8 +166,23 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
     isAttitudesCompleted, 
     isFocusCompleted, 
     isRound1Completed, 
-    isRound2Completed
+    isRound2Completed,
+    handleError,
+    handleWarning,
+    handleInfo
   ]);
   
   return <>{children}</>;
+}
+
+/**
+ * Export the GamePhaseWrapper with error boundary
+ * This ensures that errors in the wrapper don't crash the entire application
+ */
+export default function GamePhaseWrapper(props: GamePhaseWrapperProps) {
+  return (
+    <PageErrorBoundary>
+      <GamePhaseWrapperContent {...props} />
+    </PageErrorBoundary>
+  );
 }

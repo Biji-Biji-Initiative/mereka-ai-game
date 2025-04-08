@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useEffect } from 'react';
 import { useGameStore, GamePhase } from '@/store/useGameStore';
@@ -8,6 +8,7 @@ import { useLeaderboardStore } from '@/store/leaderboard-store';
 import { useNetworkStore } from '@/store/network-store';
 import { BadgeNotification } from '@/components/badges/BadgeNotification';
 import GamePhaseNavigator from './GamePhaseNavigator';
+import { useCentralizedErrorHandler } from '@/lib/error/CentralizedErrorHandler';
 
 /**
  * GameIntegration component
@@ -19,6 +20,7 @@ import GamePhaseNavigator from './GamePhaseNavigator';
  * - Neural Network Progression
  * 
  * It monitors game state changes and updates all systems accordingly.
+ * Enhanced with centralized error handling for Phase 3.
  */
 export function GameIntegration() {
   // Get game state from the new useGameStore
@@ -44,13 +46,22 @@ export function GameIntegration() {
   const initializeNetwork = useNetworkStore(state => state.initializeNetwork);
   const updateNetworkFromGame = useNetworkStore(state => state.updateNetworkFromGame);
   
+  // Use centralized error handler
+  const { handleError, handleWarning, handleInfo } = useCentralizedErrorHandler('GameIntegration');
+  
   // Initialize systems when game starts
   useEffect(() => {
     if (userId) {
-      initializeBadges(userId);
-      initializeNetwork(userId);
+      try {
+        handleInfo('Initializing game systems');
+        initializeBadges(userId);
+        initializeNetwork(userId);
+      } catch (error) {
+        handleError(error, { context: 'system-initialization', userId });
+        // Graceful degradation: continue even if initialization fails
+      }
     }
-  }, [userId, initializeBadges, initializeNetwork]);
+  }, [userId, initializeBadges, initializeNetwork, handleError, handleInfo]);
   
   // Update systems when round results change
   useEffect(() => {
@@ -66,6 +77,8 @@ export function GameIntegration() {
     
     if (hasCompletedRound) {
       try {
+        handleInfo('Updating game systems with round results');
+        
         // Update badges with selected game and rival state
         const gameStateCopy = useGameStore.getState();
         const rivalStateCopy = useRivalStore.getState();
@@ -97,13 +110,23 @@ export function GameIntegration() {
           
           // Update neural network with formatted game state
           updateNetworkFromGame(formattedGameState, rivalStateCopy);
+        } else {
+          handleWarning('Game state or rival state is undefined', { 
+            hasGameState: !!gameStateCopy, 
+            hasRivalState: !!rivalStateCopy 
+          });
         }
       } catch (error) {
-        console.error('Error updating game systems:', error);
-        // Gracefully handle the error without breaking the UI
+        handleError(error, { 
+          context: 'updating-game-systems', 
+          hasRound1, 
+          hasRound2, 
+          hasRound3 
+        });
+        // Graceful degradation: continue even if updates fail
       }
     }
-  }, [responses, updateBadges, updateUserScore, updateNetworkFromGame]);
+  }, [responses, updateBadges, updateUserScore, updateNetworkFromGame, handleError, handleWarning, handleInfo]);
   
   // Handle badge notifications - ensure recentlyUnlocked is an array
   const [currentBadge, ...remainingBadges] = Array.isArray(recentlyUnlocked) ? recentlyUnlocked : [];
@@ -113,7 +136,7 @@ export function GameIntegration() {
       try {
         clearRecentlyUnlocked();
       } catch (error) {
-        console.error('Error clearing badge notifications:', error);
+        handleError(error, { context: 'clearing-badge-notifications' });
       }
     }
   };
