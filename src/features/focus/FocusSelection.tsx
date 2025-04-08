@@ -201,6 +201,9 @@ export default function FocusSelection() {
         description: selectedFocus.description,
         matchLevel: selectedFocus.matchLevel
       });
+      
+      // Navigate to round1 page
+      router.push('/round1');
     } catch (error) {
       console.error('Error saving focus selection:', error);
     } finally {
