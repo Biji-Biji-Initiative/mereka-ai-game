@@ -81,10 +81,14 @@ export default function TraitAssessment() {
   // Calculate progress
   const progress = ((currentQuestion + 1) / traitQuestions.length) * 100;
   
-  // Initialize all traits with default values
+  // Initialize all traits with default values (middle value of 3 on scale of 1-5)
   useEffect(() => {
+    // Use value 3 (neutral/middle) for consistency with StepByStepAttitudeAssessment
+    // Convert to scale of 0-100 for slider display (3 on 1-5 scale = 50 on 0-100 scale)
     const defaultTraits = traitQuestions.reduce((acc, q) => ({ ...acc, [q.id]: 50 }), {});
     setTraits(defaultTraits);
+    // Set initial selected value to "3" (middle option) for the first question
+    setSelectedValue("3");
   }, []);
   
   const handleTabChange = (value: string) => {
