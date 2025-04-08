@@ -118,6 +118,12 @@ export default function TraitAssessment() {
   
   const handlePrevious = () => {
     if (currentQuestion > 0) {
+      // Save current question answer before moving back
+      const question = traitQuestions[currentQuestion];
+      const traitValue = parseInt(selectedValue, 10);
+      setTraits(prev => ({ ...prev, [question.id]: traitValue }));
+      
+      // Move to previous question
       setCurrentQuestion(prev => prev - 1);
       
       // Set the value from stored traits
@@ -172,10 +178,15 @@ export default function TraitAssessment() {
       console.log("Saving personality traits:", storeTraits);
       saveTraits(storeTraits);
       
+      // Explicitly set the game phase to ATTITUDES to ensure navigation
+      setGamePhase(GamePhase.ATTITUDES);
+      
       // Add transition effect
       setIsTransitioning(true);
       setTimeout(() => {
         setIsTransitioning(false);
+        // Explicitly navigate to attitudes page after transition
+        router.push('/attitudes');
       }, 500);
     } catch (error) {
       console.error("Error saving traits:", error);
