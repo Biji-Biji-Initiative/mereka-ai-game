@@ -184,15 +184,34 @@ export const useGameStore = create<GameStoreState>()(
 
         resetGame: () => {
           console.log("Resetting game state...");
-          set({ ...initialState, sessionId: uuidv4() });
           
-          // Add history entry for reset
+          // First, add history entry for reset
           set(state => ({
-            history: [{ 
+            history: [...state.history, { 
               action: 'GAME_RESET', 
               timestamp: new Date().toISOString() 
             }]
           }));
+          
+          // Then reset to initial state but preserve the updated history
+          set(state => {
+            const history = [...state.history];
+            return { 
+              ...initialState, 
+              sessionId: uuidv4(),
+              history,
+              gamePhase: GamePhase.WELCOME
+            };
+          });
+          
+          // Clear any persisted state in localStorage
+          if (typeof window !== 'undefined') {
+            try {
+              localStorage.removeItem('human-edge-game-storage');
+            } catch (e) {
+              console.error('Failed to clear localStorage:', e);
+            }
+          }
         },
 
         setGamePhase: (phase: GamePhase) => set({ gamePhase: phase }),
