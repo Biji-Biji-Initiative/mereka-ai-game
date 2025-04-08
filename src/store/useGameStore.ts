@@ -417,10 +417,13 @@ export const useGameStore = create<GameStoreState>()(
               timestamp: new Date().toISOString()
             }]
           }));
-        }
+        },
         // --- END NEW PERSONALITY ACTION ---
 
-        onRehydrateStorage: (state) => {
+        onRehydrateStorage: (state: GameState | undefined) => {
+          if (state) {
+            console.log('Hydrated state:', state);
+          }
           console.log('Hydration finished.');
         }
       }),

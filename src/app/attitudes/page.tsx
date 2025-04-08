@@ -3,12 +3,12 @@
 import React from 'react';
 import GamePhaseWrapper from '@/components/game/GamePhaseWrapper';
 import { GamePhase } from '@/store/useGameStore';
-import AIAttitudeAssessment from '@/features/assessment/AIAttitudeAssessment';
+import { StepByStepAttitudeAssessment } from '@/features/assessment/components/StepByStepAttitudeAssessment';
 
 export default function AttitudesPage() {
   return (
     <GamePhaseWrapper targetPhase={GamePhase.ATTITUDES}>
-      <AIAttitudeAssessment />
+      <StepByStepAttitudeAssessment />
     </GamePhaseWrapper>
   );
-} 
+}

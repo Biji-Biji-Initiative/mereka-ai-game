@@ -23,7 +23,7 @@ import GamePhaseNavigator from './GamePhaseNavigator';
 export function GameIntegration() {
   // Get game state from the new useGameStore
   const gamePhase = useGameStore(state => state.gamePhase);
-  const responses = useGameStore(state => state.responses);
+  const responses = useGameStore(state => state.responses || {});
   
   // Use a default user ID
   const userId = 'default-user';
@@ -34,7 +34,7 @@ export function GameIntegration() {
   // Get badge state
   const initializeBadges = useBadgeStore(state => state.initializeBadges);
   const updateBadges = useBadgeStore(state => state.updateBadges);
-  const recentlyUnlocked = useBadgeStore(state => state.recentlyUnlocked);
+  const recentlyUnlocked = useBadgeStore(state => state.recentlyUnlocked || []);
   const clearRecentlyUnlocked = useBadgeStore(state => state.clearRecentlyUnlocked);
   
   // Get leaderboard state
@@ -54,10 +54,13 @@ export function GameIntegration() {
   
   // Update systems when round results change
   useEffect(() => {
+    // Check if responses is defined before accessing properties
+    if (!responses) return;
+    
     // Check if any round is completed
-    const hasRound1 = !!responses.round1?.userResponse;
-    const hasRound2 = !!responses.round2?.userResponse;
-    const hasRound3 = !!responses.round3?.userResponse;
+    const hasRound1 = !!(responses.round1 && responses.round1.userResponse);
+    const hasRound2 = !!(responses.round2 && responses.round2.userResponse);
+    const hasRound3 = !!(responses.round3 && responses.round3.userResponse);
     
     const hasCompletedRound = hasRound1 || hasRound2 || hasRound3;
     
@@ -65,29 +68,35 @@ export function GameIntegration() {
       // Update badges with selected game and rival state
       const gameStateCopy = useGameStore.getState();
       const rivalStateCopy = useRivalStore.getState();
-      updateBadges(gameStateCopy, rivalStateCopy);
       
-      // Update leaderboard with latest scores - using mock scores for now
-      if (hasRound1) {
-        updateUserScore('round1', 75);
+      // Ensure both state objects exist before updating
+      if (gameStateCopy && rivalStateCopy) {
+        updateBadges(gameStateCopy, rivalStateCopy);
+        
+        // Update leaderboard with latest scores - using mock scores for now
+        if (hasRound1) {
+          updateUserScore('round1', 75);
+        }
+        if (hasRound2) {
+          updateUserScore('round2', 85);
+        }
+        if (hasRound3) {
+          updateUserScore('round3', 95);
+        }
+        
+        // Update neural network
+        updateNetworkFromGame(gameStateCopy, rivalStateCopy);
       }
-      if (hasRound2) {
-        updateUserScore('round2', 85);
-      }
-      if (hasRound3) {
-        updateUserScore('round3', 95);
-      }
-      
-      // Update neural network
-      updateNetworkFromGame(gameStateCopy, rivalStateCopy);
     }
   }, [responses, updateBadges, updateUserScore, updateNetworkFromGame]);
   
-  // Handle badge notifications
-  const [currentBadge, ...remainingBadges] = recentlyUnlocked;
+  // Handle badge notifications - ensure recentlyUnlocked is an array
+  const [currentBadge, ...remainingBadges] = Array.isArray(recentlyUnlocked) ? recentlyUnlocked : [];
   
   const handleBadgeNotificationClose = () => {
-    clearRecentlyUnlocked();
+    if (clearRecentlyUnlocked) {
+      clearRecentlyUnlocked();
+    }
   };
   
   return (

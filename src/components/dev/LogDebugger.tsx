@@ -30,6 +30,8 @@ export function LogDebugger({
     search: '',
     limit: 100
   });
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
+  const [copiedLogIndex, setCopiedLogIndex] = useState<number | null>(null);
   
   // Position styles
   const positionStyles: Record<string, string> = {
@@ -83,6 +85,33 @@ export function LogDebugger({
     URL.revokeObjectURL(url);
   };
   
+  // Copy to clipboard functionality
+  const copyToClipboard = (text: string, index: number | null = null) => {
+    navigator.clipboard.writeText(text)
+      .then(() => {
+        setCopySuccess('Copied!');
+        setCopiedLogIndex(index);
+        setTimeout(() => {
+          setCopySuccess(null);
+          setCopiedLogIndex(null);
+        }, 2000);
+      })
+      .catch(() => {
+        setCopySuccess('Failed to copy');
+        setTimeout(() => {
+          setCopySuccess(null);
+        }, 2000);
+      });
+  };
+  
+  // Copy all logs
+  const copyAllLogs = () => {
+    const logText = filteredLogs.map(log => 
+      `${formatTime(log.timestamp)}: ${log.level.toUpperCase()} - ${log.message}${log.data ? '\n' + JSON.stringify(log.data, null, 2) : ''}`
+    ).join('\n');
+    copyToClipboard(logText);
+  };
+  
   // Filter logs based on current filter
   const filteredLogs = filterLogs(filter);
   
@@ -130,6 +159,17 @@ export function LogDebugger({
               >
                 Export CSV
               </button>
+              <button 
+                onClick={copyAllLogs}
+                className="text-xs bg-primary/20 hover:bg-primary/40 text-primary-foreground px-2 py-1 rounded transition-colors flex items-center gap-1"
+              >
+                {copySuccess && copiedLogIndex === null ? (
+                  <span className="text-green-500">✓</span>
+                ) : (
+                  <span>📋</span>
+                )}
+                {copySuccess && copiedLogIndex === null ? copySuccess : 'Copy All'}
+              </button>
             </div>
           </div>
           
@@ -163,12 +203,23 @@ export function LogDebugger({
               <div className="text-center text-muted-foreground py-4">No logs to display</div>
             ) : (
               <div className="space-y-1">
-                {filteredLogs.map((log: LogEntry) => (
+                {filteredLogs.map((log: LogEntry, index: number) => (
                   <div key={log.id} className="border-b border-primary/10 pb-1 last:border-0">
                     <div className="flex items-start gap-2">
                       <span className="text-muted-foreground">{formatTime(log.timestamp)}</span>
                       <span className={`${levelColors[log.level]} uppercase font-bold`}>{log.level}</span>
                       <span className="flex-grow">{log.message}</span>
+                      <button 
+                        onClick={() => copyToClipboard(`${formatTime(log.timestamp)} ${log.level.toUpperCase()}: ${log.message}${log.data ? '\n' + JSON.stringify(log.data, null, 2) : ''}`, index)}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                        title="Copy log entry"
+                      >
+                        {copySuccess && copiedLogIndex === index ? (
+                          <span className="text-green-500">✓</span>
+                        ) : (
+                          <span>📋</span>
+                        )}
+                      </button>
                     </div>
                     {log.data && (
                       <div className="ml-20 mt-1 text-muted-foreground">
