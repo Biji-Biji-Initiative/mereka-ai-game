@@ -186,10 +186,13 @@ export const useGameStore = create<GameStoreState>()(
           console.log("Resetting game state...");
           set({ ...initialState, sessionId: uuidv4() });
           
-          // Remove the redirect to prevent infinite loop
-          // if (typeof window !== 'undefined') {
-          //   window.location.href = '/';
-          // }
+          // Add history entry for reset
+          set(state => ({
+            history: [{ 
+              action: 'GAME_RESET', 
+              timestamp: new Date().toISOString() 
+            }]
+          }));
         },
 
         setGamePhase: (phase: GamePhase) => set({ gamePhase: phase }),
