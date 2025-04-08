@@ -87,8 +87,11 @@ export default function UserContextForm() {
       };
       saveUserInfo(userInfo);
       
-      // Navigation is handled by GamePhaseNavigator now
-      // router.push('/traits'); 
+      // Add direct navigation as fallback in case GamePhaseNavigator doesn't trigger
+      console.log('UserContextForm: Form submitted successfully, navigating to /traits');
+      setTimeout(() => {
+        router.push('/traits');
+      }, 300);
     }
   };
   
