@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -12,27 +12,20 @@ export default function ResultsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<'profile' | 'journey' | 'badges'>('profile');
   
-  // Get game store values
-  const { 
-    personality, 
-    userInfo, 
-    focus, 
-    responses, 
-    profile,
-    gamePhase
-  } = useGameStore(state => ({
-    personality: state.personality,
-    userInfo: state.userInfo,
-    focus: state.focus,
-    responses: state.responses,
-    profile: state.profile,
-    gamePhase: state.gamePhase
-  }));
+  // Get game store values with individual selectors to prevent unnecessary re-renders
+  const personality = useGameStore(state => state.personality);
+  const userInfo = useGameStore(state => state.userInfo);
+  const focus = useGameStore(state => state.focus);
+  const responses = useGameStore(state => state.responses);
+  const profile = useGameStore(state => state.profile);
+  const gamePhase = useGameStore(state => state.gamePhase);
   
   // Check if user has completed all rounds
-  const hasCompletedAllRounds = !!responses?.round1?.userResponse && 
-                               !!responses?.round2?.userResponse && 
-                               !!responses?.round3?.userResponse;
+  const hasCompletedAllRounds = useMemo(() => {
+    return !!responses?.round1?.userResponse && 
+           !!responses?.round2?.userResponse && 
+           !!responses?.round3?.userResponse;
+  }, [responses]);
   
   // Redirect if essential data is missing
   useEffect(() => {
@@ -66,8 +59,8 @@ export default function ResultsPage() {
     );
   }
   
-  // Calculate overall metrics from personality traits
-  const calculateOverallMetrics = () => {
+  // Calculate overall metrics from personality traits - memoized to prevent recalculation on every render
+  const overallMetrics = useMemo(() => {
     if (!personality?.traits?.length) return null;
     
     // Map traits to metrics categories
@@ -90,20 +83,24 @@ export default function ResultsPage() {
     );
     
     // Calculate averages (or use default if no traits match)
+    // Use fixed seed for random values to ensure consistency between renders
+    const randomSeed = personality.traits.reduce((sum, t) => sum + t.value, 0);
+    const getRandomValue = (base: number) => base + ((randomSeed % 100) / 100) * 15;
+    
     const creativity = creativityTraits.length > 0 
       ? creativityTraits.reduce((sum, t) => sum + t.value, 0) / creativityTraits.length 
-      : 65 + Math.random() * 15;
+      : getRandomValue(65);
       
     const practicality = practicalityTraits.length > 0 
       ? practicalityTraits.reduce((sum, t) => sum + t.value, 0) / practicalityTraits.length 
-      : 65 + Math.random() * 15;
+      : getRandomValue(65);
       
     const depth = depthTraits.length > 0 
       ? depthTraits.reduce((sum, t) => sum + t.value, 0) / depthTraits.length 
-      : 65 + Math.random() * 15;
+      : getRandomValue(65);
     
     // Human edge is a weighted combination
-    const humanEdge = (creativity * 0.4 + practicality * 0.3 + depth * 0.3) + Math.random() * 5;
+    const humanEdge = (creativity * 0.4 + practicality * 0.3 + depth * 0.3) + ((randomSeed % 100) / 100) * 5;
     
     return {
       creativity,
@@ -112,18 +109,15 @@ export default function ResultsPage() {
       humanEdge,
       overall: (creativity + practicality + depth + humanEdge) / 4
     };
-  };
+  }, [personality]);
   
-  // Get overall metrics
-  const overallMetrics = calculateOverallMetrics();
-  
-  // Generate badges based on traits and focus
-  const generateBadges = () => {
-    const badges = [];
+  // Generate badges based on traits and focus - memoized to prevent recalculation on every render
+  const badges = useMemo(() => {
+    const badgesList = [];
     
     // Focus area badge
     if (focus) {
-      badges.push({
+      badgesList.push({
         name: `${focus.name} Specialist`,
         description: `You've demonstrated expertise in ${focus.name}`,
         type: 'focus'
@@ -135,7 +129,7 @@ export default function ResultsPage() {
       // Find highest trait
       const highestTrait = [...personality.traits].sort((a, b) => b.value - a.value)[0];
       if (highestTrait && highestTrait.value > 70) {
-        badges.push({
+        badgesList.push({
           name: `${highestTrait.name} Master`,
           description: `Your ${highestTrait.name} is exceptional`,
           type: 'trait'
@@ -146,7 +140,7 @@ export default function ResultsPage() {
       const traitValues = personality.traits.map(t => t.value);
       const maxDiff = Math.max(...traitValues) - Math.min(...traitValues);
       if (maxDiff < 20) {
-        badges.push({
+        badgesList.push({
           name: 'Well-Rounded',
           description: 'You have a balanced set of traits',
           type: 'special'
@@ -156,14 +150,14 @@ export default function ResultsPage() {
     
     // Completion badge
     if (hasCompletedAllRounds) {
-      badges.push({
+      badgesList.push({
         name: 'Challenge Completer',
         description: 'You completed all three challenge rounds',
         type: 'achievement'
       });
     }
     
-    // Add some random badges for variety
+    // Add some random badges for variety - use a deterministic approach
     const randomBadges = [
       {
         name: 'Creative Thinker',
@@ -182,73 +176,73 @@ export default function ResultsPage() {
       }
     ];
     
-    // Add 1-2 random badges
-    const numRandomBadges = 1 + Math.floor(Math.random() * 2);
-    for (let i = 0; i < numRandomBadges; i++) {
-      badges.push(randomBadges[i]);
+    // Use a deterministic approach to select badges
+    const seed = personality?.traits?.length ? 
+      personality.traits.reduce((sum, t) => sum + t.value, 0) : 
+      (focus?.matchLevel || 50);
+    
+    // Add 1-2 random badges based on seed
+    const numRandomBadges = 1 + (seed % 2);
+    for (let i = 0; i < numRandomBadges && i < randomBadges.length; i++) {
+      badgesList.push(randomBadges[i]);
     }
     
-    return badges;
-  };
+    return badgesList;
+  }, [focus, personality, hasCompletedAllRounds]);
   
-  // Get badges
-  const badges = generateBadges();
-  
-  // Generate insights based on traits, focus, and responses
-  const generateInsights = () => {
+  // Generate insights based on traits, focus, and responses - memoized to prevent recalculation on every render
+  const insights = useMemo(() => {
     if (!personality?.traits?.length || !focus) return [];
     
-    const insights = [];
+    const insightsList = [];
     
     // Focus-based insight
-    insights.push(`Your focus on ${focus.name} aligns well with your personality traits, particularly your ${personality.traits[0]?.name}.`);
+    if (personality.traits[0]) {
+      insightsList.push(`Your focus on ${focus.name} aligns well with your personality traits, particularly your ${personality.traits[0]?.name}.`);
+    }
     
     // Response-based insights
     if (responses?.round1?.userResponse) {
-      insights.push('Your initial approach to challenges shows a preference for creative problem-solving.');
+      insightsList.push('Your initial approach to challenges shows a preference for creative problem-solving.');
     }
     
     if (responses?.round2?.userResponse) {
-      insights.push('When comparing your approach with AI, you demonstrated a strong ability to identify uniquely human perspectives.');
+      insightsList.push('When comparing your approach with AI, you demonstrated a strong ability to identify uniquely human perspectives.');
     }
     
     if (responses?.round3?.userResponse) {
-      insights.push('Your final response showcased how you integrate multiple perspectives to create comprehensive solutions.');
+      insightsList.push('Your final response showcased how you integrate multiple perspectives to create comprehensive solutions.');
     }
     
     // Add a general insight
-    insights.push('Your human edge is most evident in situations requiring empathy, creativity, and contextual understanding.');
+    insightsList.push('Your human edge is most evident in situations requiring empathy, creativity, and contextual understanding.');
     
-    return insights;
-  };
+    return insightsList;
+  }, [personality, focus, responses]);
   
-  // Get insights
-  const insights = generateInsights();
-  
-  // Generate recommendations based on traits and focus
-  const generateRecommendations = () => {
+  // Generate recommendations based on traits and focus - memoized to prevent recalculation on every render
+  const recommendations = useMemo(() => {
     if (!personality?.traits?.length || !focus) return [];
     
-    const recommendations = [];
+    const recommendationsList = [];
     
     // Focus-based recommendation
-    recommendations.push(`Continue developing your expertise in ${focus.name} by seeking out complex problems that require human judgment.`);
+    recommendationsList.push(`Continue developing your expertise in ${focus.name} by seeking out complex problems that require human judgment.`);
     
     // Trait-based recommendations
-    const lowestTrait = [...personality.traits].sort((a, b) => a.value - b.value)[0];
-    if (lowestTrait) {
-      recommendations.push(`Consider opportunities to strengthen your ${lowestTrait.name} through targeted practice and feedback.`);
+    if (personality.traits.length > 0) {
+      const lowestTrait = [...personality.traits].sort((a, b) => a.value - b.value)[0];
+      if (lowestTrait) {
+        recommendationsList.push(`Consider opportunities to strengthen your ${lowestTrait.name} through targeted practice and feedback.`);
+      }
     }
     
     // General recommendations
-    recommendations.push('Regularly compare your approaches with AI tools to identify and leverage your unique human advantages.');
-    recommendations.push('Seek out collaborative projects where human and AI capabilities can complement each other.');
+    recommendationsList.push('Regularly compare your approaches with AI tools to identify and leverage your unique human advantages.');
+    recommendationsList.push('Seek out collaborative projects where human and AI capabilities can complement each other.');
     
-    return recommendations;
-  };
-  
-  // Get recommendations
-  const recommendations = generateRecommendations();
+    return recommendationsList;
+  }, [personality, focus]);
   
   return (
     <div className="space-y-8 pb-16">
@@ -399,8 +393,9 @@ export default function ResultsPage() {
                     <p className="text-gray-700 dark:text-gray-300 mt-1 mb-3">
                       You approached the challenge with your unique human perspective.
                     </p>
-                    <div className="border p-3 rounded-lg bg-white dark:bg-gray-800">
-                      <p className="text-gray-800 dark:text-gray-200 text-sm">
+                    <div className="border p-4 rounded-lg bg-white dark:bg-gray-800">
+                      <h5 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Your Response:</h5>
+                      <p className="text-gray-700 dark:text-gray-300">
                         {responses?.round1?.userResponse || "No response recorded"}
                       </p>
                     </div>
@@ -408,12 +403,13 @@ export default function ResultsPage() {
                   
                   <div className="relative pl-10 pb-8">
                     <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">2</div>
-                    <h4 className="font-medium text-lg text-indigo-700 dark:text-indigo-300">Round 2: Comparing with AI</h4>
+                    <h4 className="font-medium text-lg text-indigo-700 dark:text-indigo-300">Round 2: AI Comparison</h4>
                     <p className="text-gray-700 dark:text-gray-300 mt-1 mb-3">
-                      You analyzed the differences between your approach and the AI's.
+                      You compared your approach with how AI would handle the challenge.
                     </p>
-                    <div className="border p-3 rounded-lg bg-white dark:bg-gray-800">
-                      <p className="text-gray-800 dark:text-gray-200 text-sm">
+                    <div className="border p-4 rounded-lg bg-white dark:bg-gray-800">
+                      <h5 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Your Analysis:</h5>
+                      <p className="text-gray-700 dark:text-gray-300">
                         {responses?.round2?.userResponse || "No response recorded"}
                       </p>
                     </div>
@@ -423,10 +419,11 @@ export default function ResultsPage() {
                     <div className="absolute left-0 top-1 w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center text-white">3</div>
                     <h4 className="font-medium text-lg text-indigo-700 dark:text-indigo-300">Round 3: Final Challenge</h4>
                     <p className="text-gray-700 dark:text-gray-300 mt-1 mb-3">
-                      You demonstrated your human edge in a final challenge.
+                      You demonstrated your human edge in the final challenge.
                     </p>
-                    <div className="border p-3 rounded-lg bg-white dark:bg-gray-800">
-                      <p className="text-gray-800 dark:text-gray-200 text-sm">
+                    <div className="border p-4 rounded-lg bg-white dark:bg-gray-800">
+                      <h5 className="font-medium text-gray-800 dark:text-gray-200 mb-2">Your Response:</h5>
+                      <p className="text-gray-700 dark:text-gray-300">
                         {responses?.round3?.userResponse || "No response recorded"}
                       </p>
                     </div>
@@ -437,13 +434,9 @@ export default function ResultsPage() {
               <div>
                 <h3 className="font-semibold text-lg mb-4">Your Growth</h3>
                 <div className="border p-4 rounded-lg bg-white dark:bg-gray-800">
-                  <p className="text-gray-800 dark:text-gray-200">
-                    Throughout this challenge, you've explored your unique human capabilities and how they complement AI.
-                    Your responses show growth in understanding the distinctive value you bring as a human in your focus area.
-                  </p>
-                  <p className="text-gray-800 dark:text-gray-200 mt-3">
-                    Continue to develop your human edge by seeking out complex problems that require the creativity,
-                    empathy, and contextual understanding that humans excel at.
+                  <p className="text-gray-700 dark:text-gray-300">
+                    Throughout this challenge, you've developed a deeper understanding of your human edge in the context of AI. 
+                    Your responses show growth in recognizing the unique value you bring as a human in your focus area.
                   </p>
                 </div>
               </div>
@@ -454,31 +447,35 @@ export default function ResultsPage() {
           {activeTab === 'badges' && (
             <div>
               <h3 className="font-semibold text-lg mb-4">Your Earned Badges</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {badges.map((badge, index) => (
-                  <div key={index} className="border p-4 rounded-lg bg-white dark:bg-gray-800 flex flex-col items-center text-center">
-                    <div className="w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center mb-3">
-                      <span className="text-2xl text-indigo-600 dark:text-indigo-400">
-                        {badge.type === 'focus' ? '🎯' : 
-                         badge.type === 'trait' ? '🌟' : 
-                         badge.type === 'special' ? '✨' : 
-                         badge.type === 'achievement' ? '🏆' : '🧠'}
-                      </span>
+                  <div key={index} className="border p-4 rounded-lg bg-white dark:bg-gray-800 flex items-start">
+                    <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-600 dark:text-indigo-300 mr-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                      </svg>
                     </div>
-                    <h4 className="font-medium text-indigo-700 dark:text-indigo-300">{badge.name}</h4>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{badge.description}</p>
-                    <Badge variant="outline" className="mt-2">{badge.type}</Badge>
+                    <div>
+                      <h4 className="font-medium text-indigo-700 dark:text-indigo-300">{badge.name}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{badge.description}</p>
+                      <div className="mt-2">
+                        <Badge variant="outline" className="text-xs bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-300">
+                          {badge.type}
+                        </Badge>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
               
-              {badges.length > 0 && (
-                <div className="mt-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg">
-                  <p className="text-gray-800 dark:text-gray-200">
-                    You've earned {badges.length} badges! Continue exploring your human edge to unlock more.
-                  </p>
-                </div>
-              )}
+              <div className="mt-8 p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
+                <h3 className="font-semibold text-lg text-indigo-700 dark:text-indigo-300 mb-2">
+                  Continue Your Journey
+                </h3>
+                <p className="text-gray-700 dark:text-gray-300">
+                  Complete more challenges to earn additional badges and further develop your human edge profile.
+                </p>
+              </div>
             </div>
           )}
         </CardContent>
@@ -492,13 +489,13 @@ export default function ResultsPage() {
           </Button>
           <Button 
             onClick={() => {
-              // Reset game and go to welcome page
-              useGameStore.getState().resetGame();
+              const resetGame = useGameStore.getState().resetGame;
+              resetGame();
               router.push('/');
             }}
             className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800"
           >
-            Start New Game
+            Start New Challenge
           </Button>
         </CardFooter>
       </Card>
