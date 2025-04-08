@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useGameStore } from '@/store/useGameStore';
+import { useGameStore, GamePhase } from '@/store/useGameStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -73,6 +73,7 @@ const attitudeQuestions = [
 export function StepByStepAttitudeAssessment() {
   const router = useRouter();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   // Initialize with default values for all questions to reduce friction
   const [answers, setAnswers] = useState<Record<number, number>>({
     1: 3, // Default to "Neutral" for all questions
@@ -82,8 +83,9 @@ export function StepByStepAttitudeAssessment() {
     5: 3
   });
   
-  // Use saveAttitudes from the game store
+  // Use individual selectors for better performance
   const saveAttitudes = useGameStore(state => state.saveAttitudes);
+  const setGamePhase = useGameStore(state => state.setGamePhase);
   
   const currentQuestion = attitudeQuestions[currentQuestionIndex];
   const progress = ((currentQuestionIndex + 1) / attitudeQuestions.length) * 100;
@@ -113,7 +115,7 @@ export function StepByStepAttitudeAssessment() {
         { 
           id: '1', 
           attitude: 'creativity', 
-          strength: attitudeScores.creativity, 
+          strength: attitudeScores.creativity * 20, // Convert 1-5 scale to 0-100
           description: 'AI in creative fields',
           lowLabel: 'Very concerned',
           highLabel: 'Very positive'
@@ -121,7 +123,7 @@ export function StepByStepAttitudeAssessment() {
         { 
           id: '2', 
           attitude: 'jobs', 
-          strength: attitudeScores.jobs, 
+          strength: attitudeScores.jobs * 20, 
           description: 'AI impact on jobs',
           lowLabel: 'Very concerned',
           highLabel: 'Very positive'
@@ -129,7 +131,7 @@ export function StepByStepAttitudeAssessment() {
         { 
           id: '3', 
           attitude: 'decisions', 
-          strength: attitudeScores.decisions, 
+          strength: attitudeScores.decisions * 20, 
           description: 'AI in decision-making',
           lowLabel: 'Very concerned',
           highLabel: 'Very positive'
@@ -137,7 +139,7 @@ export function StepByStepAttitudeAssessment() {
         { 
           id: '4', 
           attitude: 'privacy', 
-          strength: attitudeScores.privacy, 
+          strength: attitudeScores.privacy * 20, 
           description: 'AI impact on privacy',
           lowLabel: 'Very concerned',
           highLabel: 'Very positive'
@@ -145,7 +147,7 @@ export function StepByStepAttitudeAssessment() {
         { 
           id: '5', 
           attitude: 'development', 
-          strength: attitudeScores.development, 
+          strength: attitudeScores.development * 20, 
           description: 'Pace of AI development',
           lowLabel: 'Too fast',
           highLabel: 'Too slow'
@@ -153,18 +155,29 @@ export function StepByStepAttitudeAssessment() {
       ];
       
       try {
-        // Save attitudes to the game store - this will trigger phase change in the store
-        // which will be handled by GamePhaseNavigator for navigation
+        // Add transition effect
+        setIsTransitioning(true);
+        
+        // Save attitudes to the game store
         saveAttitudes(aiAttitudes);
+        
+        // Explicitly set game phase to FOCUS
+        setGamePhase(GamePhase.FOCUS);
         
         // Add to console for debugging
         console.log('Attitudes saved successfully:', aiAttitudes);
         
-        // No direct navigation - let the GamePhaseNavigator handle it
-        // The saveAttitudes function in useGameStore will update the gamePhase
-        // which will trigger the GamePhaseNavigator to handle navigation
+        // Use a short timeout to ensure state updates are processed before navigation
+        setTimeout(() => {
+          setIsTransitioning(false);
+          
+          // Explicitly navigate to focus page
+          console.log('Navigating to focus page');
+          router.push('/focus');
+        }, 300);
       } catch (error) {
         console.error('Error saving attitudes:', error);
+        setIsTransitioning(false);
       }
     }
   };
@@ -172,6 +185,9 @@ export function StepByStepAttitudeAssessment() {
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
+    } else {
+      // If on first question, navigate back to traits
+      router.push('/traits');
     }
   };
   
@@ -180,7 +196,7 @@ export function StepByStepAttitudeAssessment() {
   };
   
   return (
-    <div className="container max-w-4xl mx-auto px-4 py-8">
+    <div className={`container max-w-4xl mx-auto px-4 py-8 transition-opacity duration-500 ${isTransitioning ? 'opacity-0' : 'opacity-100'}`}>
       <div className="text-center mb-6">
         <h1 className="text-3xl md:text-4xl font-bold text-gradient mb-2">AI Attitude Assessment</h1>
         <p className="text-lg text-muted-foreground">Help us understand your perspective on artificial intelligence</p>
@@ -254,7 +270,7 @@ export function StepByStepAttitudeAssessment() {
           <Button 
             variant="glass" 
             onClick={handlePrevious}
-            disabled={currentQuestionIndex === 0}
+            disabled={isTransitioning}
             className="w-full sm:w-1/3"
           >
             Previous
@@ -263,6 +279,7 @@ export function StepByStepAttitudeAssessment() {
           <Button 
             variant="holographic" 
             onClick={handleNext}
+            disabled={isTransitioning}
             className="w-full sm:w-1/3"
           >
             {currentQuestionIndex < attitudeQuestions.length - 1

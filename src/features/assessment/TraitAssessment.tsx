@@ -72,8 +72,10 @@ export default function TraitAssessment() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   
-  // Get store functions
-  const { saveTraits, userInfo, setGamePhase } = useGameStore();
+  // Get store functions with individual selectors for better performance
+  const saveTraits = useGameStore(state => state.saveTraits);
+  const userInfo = useGameStore(state => state.userInfo);
+  const setGamePhase = useGameStore(state => state.setGamePhase);
   
   // Initialize mutation for saving traits
   const traitsMutation = useSaveTraitAssessment();
@@ -174,7 +176,6 @@ export default function TraitAssessment() {
       }
       
       // Save to store - this will trigger phase change in the store
-      // which will be handled by GamePhaseNavigator for navigation
       console.log("Saving personality traits:", storeTraits);
       saveTraits(storeTraits);
       
@@ -183,11 +184,16 @@ export default function TraitAssessment() {
       
       // Add transition effect
       setIsTransitioning(true);
+      
+      // Use a short timeout to ensure state updates are processed before navigation
       setTimeout(() => {
         setIsTransitioning(false);
+        
         // Explicitly navigate to attitudes page after transition
+        // This ensures we navigate even if the GamePhaseNavigator doesn't catch the phase change
+        console.log("Navigating to attitudes page");
         router.push('/attitudes');
-      }, 500);
+      }, 300);
     } catch (error) {
       console.error("Error saving traits:", error);
       toast({
@@ -195,7 +201,6 @@ export default function TraitAssessment() {
         description: ERROR_MESSAGES.SAVE_ERROR,
         variant: "destructive"
       });
-    } finally {
       setIsSubmitting(false);
     }
   };
@@ -298,4 +303,4 @@ export default function TraitAssessment() {
       </div>
     </div>
   );
-} 
+}
