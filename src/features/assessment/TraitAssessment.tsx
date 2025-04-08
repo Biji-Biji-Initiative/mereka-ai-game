@@ -163,7 +163,8 @@ export default function TraitAssessment() {
         });
       }
       
-      // Save to store
+      // Save to store - this will trigger phase change in the store
+      // which will be handled by GamePhaseNavigator for navigation
       console.log("Saving personality traits:", storeTraits);
       saveTraits(storeTraits);
       

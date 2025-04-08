@@ -3,7 +3,6 @@
 import { useEffect, useRef } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { useGameStore, GamePhase } from '@/store';
-// Re-import necessary hooks and types
 import { useGenerateChallenge } from '@/services/api/services';
 import { Challenge } from '@/services/api/services/challengeService';
 import { ApiResponse } from '@/services/api/apiResponse';
@@ -30,6 +29,8 @@ const PHASE_TO_ROUTE: Record<GamePhase, string> = {
  * Monitors gamePhase and handles:
  * 1. Navigation to the correct route based on the phase.
  * 2. Triggering dynamic challenge generation after FOCUS phase.
+ * 
+ * Refactored to follow Next.js 15 best practices and single responsibility principle.
  */
 export default function GamePhaseNavigator() {
   const router = useRouter();
@@ -41,9 +42,7 @@ export default function GamePhaseNavigator() {
   const focus = useGameStore((state) => state.focus);
   const currentChallenge = useGameStore((state) => state.currentChallenge);
   const setCurrentChallenge = useGameStore((state) => state.setCurrentChallenge);
-  const traits = useGameStore(state => state.personality.traits);
-  const attitudes = useGameStore(state => state.personality.attitudes);
-  const userInfo = useGameStore(state => state.userInfo);
+  const getIsPhaseCompleted = useGameStore((state) => state.getIsPhaseCompleted);
   
   // Track the last navigation to prevent loops
   const lastNavigation = useRef({ from: '', to: '', timestamp: 0 });
@@ -52,106 +51,112 @@ export default function GamePhaseNavigator() {
   const generateChallengeMutation = useGenerateChallenge();
   const challengeGenTriggered = useRef(false); // Prevent multiple triggers
   
-  // Effect 1: Handle Challenge Generation AFTER Focus Selection
+  /**
+   * Effect 1: Handle Challenge Generation AFTER Focus Selection
+   * Single responsibility: Generate challenge when focus is selected
+   */
   useEffect(() => {
-    console.log(`[Nav Effect 1 - Challenge Gen Check] Phase: ${gamePhase}, Focus: ${!!focus}, Challenge: ${!!currentChallenge}, Triggered: ${challengeGenTriggered.current}`);
+    // Skip if not in FOCUS phase or no focus selected
+    if (gamePhase !== GamePhase.FOCUS || !focus) return;
+    
+    // Skip if challenge already exists
+    if (currentChallenge) return;
+    
+    // Skip if already generating
+    if (generateChallengeMutation.isPending) return;
+    
+    // Skip if already triggered in this render cycle
+    if (challengeGenTriggered.current) return;
+    
+    console.log(`[Nav Effect 1] Triggering challenge generation for focus: ${focus.id}`);
+    challengeGenTriggered.current = true; // Mark as triggered
 
-    if (
-      gamePhase === GamePhase.FOCUS &&
-      focus &&                                // Focus is selected
-      !currentChallenge &&                      // No challenge set yet
-      !generateChallengeMutation.isPending && // Not already generating
-      !challengeGenTriggered.current          // Haven't triggered in this render cycle
-    ) {
-      console.log(`[Nav Effect 1] Triggering challenge generation for focus: ${focus.id}`);
-      challengeGenTriggered.current = true; // Mark as triggered
+    // Helper function to map API Challenge to UIChallenge
+    const mapToUIChallenge = (apiChallenge: Challenge): UIChallenge => ({
+      ...apiChallenge,
+      status: 'pending',
+      difficulty: 'intermediate',
+      content: apiChallenge.description || '', 
+      round1Prompt: '', 
+      round1Placeholder: '',
+      round2Prompt: '',
+      round2Placeholder: '',
+      round3Description: '',
+      round3Prompt: '',
+      round3Placeholder: '',
+      aiResponseForRound1: '',
+      aiResponseForRound2: '',
+      createdAt: new Date().toISOString(), 
+      userEmail: ''
+    });
 
-      // Helper function to map API Challenge to UIChallenge
-      const mapToUIChallenge = (apiChallenge: Challenge): UIChallenge => ({
-        ...apiChallenge,
-        status: 'pending',
-        difficulty: 'intermediate', // Assuming intermediate, adjust if needed
-        content: apiChallenge.description || '', 
-        round1Prompt: '', 
-        round1Placeholder: '',
-        round2Prompt: '',
-        round2Placeholder: '',
-        round3Description: '',
-        round3Prompt: '',
-        round3Placeholder: '',
-        aiResponseForRound1: '',
-        aiResponseForRound2: '',
-        createdAt: new Date().toISOString(), 
-        userEmail: '' // Add default or get from userInfo if available
-      });
-
-      generateChallengeMutation.mutate(
-        { focusArea: focus.id, difficulty: 'intermediate' }, // Use selected focus id
-        {
-          onSuccess: (result: ApiResponse<Challenge>) => {
-            if (result.success && result.data) {
-              console.log('[Nav Effect 1] Challenge generated:', result.data.id);
-              // Convert and set the challenge - DO NOT SET PHASE HERE
-              const uiChallengeData: UIChallenge = mapToUIChallenge(result.data); // Use mapper
-              setCurrentChallenge(uiChallengeData);
-            } else {
-              console.error('[Nav Effect 1] Failed to generate challenge:', result.error || 'Unknown API error');
-              // Handle error appropriately (e.g., show toast, set error state)
-            }
-            challengeGenTriggered.current = false; // Reset trigger flag after completion/error
-          },
-          onError: (error: Error) => {
-            console.error('[Nav Effect 1] Error during challenge generation:', error);
-            challengeGenTriggered.current = false; // Reset trigger flag on error
-            // Handle error appropriately
-          },
-        }
-      );
-    } else if (gamePhase !== GamePhase.FOCUS) {
-       challengeGenTriggered.current = false; // Reset if we move away from FOCUS phase
-    }
-  // Only trigger this effect based on the core conditions changing
+    generateChallengeMutation.mutate(
+      { focusArea: focus.id, difficulty: 'intermediate' },
+      {
+        onSuccess: (result: ApiResponse<Challenge>) => {
+          if (result.success && result.data) {
+            console.log('[Nav Effect 1] Challenge generated:', result.data.id);
+            const uiChallengeData: UIChallenge = mapToUIChallenge(result.data);
+            setCurrentChallenge(uiChallengeData);
+          } else {
+            console.error('[Nav Effect 1] Failed to generate challenge:', result.error || 'Unknown API error');
+          }
+          challengeGenTriggered.current = false;
+        },
+        onError: (error: Error) => {
+          console.error('[Nav Effect 1] Error during challenge generation:', error);
+          challengeGenTriggered.current = false;
+        },
+      }
+    );
   }, [gamePhase, focus, currentChallenge, generateChallengeMutation, setCurrentChallenge]);
 
-  // Simplified Navigation Effect: Keeps URL in sync with gamePhase
-  // Effect 2: Handle Phase Transition and Navigation
+  /**
+   * Effect 2: Handle Phase Transitions
+   * Single responsibility: Update game phase based on completion status
+   */
   useEffect(() => {
-    console.log(`[Nav Effect 2 - Nav Check] Phase: ${gamePhase}, Path: ${pathname}, Challenge: ${!!currentChallenge}`);
-    const currentPath = pathname || '';
-    let targetPhase = gamePhase;
-
-    // *** Intermediate Step: Check if Focus is done and challenge ready ***
+    // Handle FOCUS to ROUND1 transition when challenge is ready
     if (gamePhase === GamePhase.FOCUS && currentChallenge) {
-       console.log('[Nav Effect 2] Focus complete, challenge ready. Setting phase to ROUND1.');
-       targetPhase = GamePhase.ROUND1;
-       // Set the phase, this effect will run again with the new phase
-       setGamePhase(GamePhase.ROUND1); 
-       return; // Exit early, let re-render handle navigation
+      console.log('[Nav Effect 2] Focus complete, challenge ready. Setting phase to ROUND1.');
+      setGamePhase(GamePhase.ROUND1);
     }
-    // **********************************************************************
+  }, [gamePhase, currentChallenge, setGamePhase]);
 
-    const targetRoute = PHASE_TO_ROUTE[targetPhase]; // Determine route based on current or target phase
+  /**
+   * Effect 3: Handle Navigation
+   * Single responsibility: Keep URL in sync with game phase
+   */
+  useEffect(() => {
+    const currentPath = pathname || '';
+    const targetRoute = PHASE_TO_ROUTE[gamePhase];
 
-    console.log(`[Nav Effect 2] Target Route: ${targetRoute}, Current Path: ${currentPath}`);
-    
+    // Prevent navigation loops
     const now = Date.now();
     if (
       lastNavigation.current.from === currentPath && 
       lastNavigation.current.to === targetRoute && 
       now - lastNavigation.current.timestamp < 2000 
     ) {
-      console.log(`[Nav Effect 2] Preventing navigation loop from ${currentPath} to ${targetRoute}`);
       return;
     }
     
-    // Navigate if the current path doesn't match the target route for the *current* (or intended target) phase
+    // Only navigate if current path doesn't match target route
     if (currentPath !== targetRoute) {
-      console.log(`[Nav Effect 2] Navigating from ${currentPath} to ${targetRoute} (Phase: ${targetPhase})`);
+      console.log(`[Nav Effect 3] Navigating from ${currentPath} to ${targetRoute} (Phase: ${gamePhase})`);
       lastNavigation.current = { from: currentPath, to: targetRoute, timestamp: now };
       router.push(targetRoute);
     }
-  // Depend on currentChallenge here too, so it re-evaluates the intermediate step
-  }, [gamePhase, pathname, router, currentChallenge, setGamePhase]); 
+  }, [gamePhase, pathname, router]); 
+  
+  /**
+   * Effect 4: Reset challenge generation trigger when leaving FOCUS phase
+   */
+  useEffect(() => {
+    if (gamePhase !== GamePhase.FOCUS) {
+      challengeGenTriggered.current = false;
+    }
+  }, [gamePhase]);
   
   return null;
 } 

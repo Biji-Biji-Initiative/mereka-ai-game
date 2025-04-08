@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useGameStore } from '@/store/useGameStore';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 
 const attitudeQuestions = [
@@ -73,9 +73,16 @@ const attitudeQuestions = [
 export function StepByStepAttitudeAssessment() {
   const router = useRouter();
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  // Initialize with default values for all questions to reduce friction
+  const [answers, setAnswers] = useState<Record<number, number>>({
+    1: 3, // Default to "Neutral" for all questions
+    2: 3,
+    3: 3,
+    4: 3,
+    5: 3
+  });
   
-  // Fix: Use saveAttitudes instead of updateAttitudes
+  // Use saveAttitudes from the game store
   const saveAttitudes = useGameStore(state => state.saveAttitudes);
   
   const currentQuestion = attitudeQuestions[currentQuestionIndex];
@@ -92,29 +99,73 @@ export function StepByStepAttitudeAssessment() {
     if (currentQuestionIndex < attitudeQuestions.length - 1) {
       setCurrentQuestionIndex(prev => prev + 1);
     } else {
-      // Calculate average scores
+      // Calculate scores using the preselected values if not explicitly set
       const attitudeScores = {
-        creativity: answers[1] || 3,
-        jobs: answers[2] || 3,
-        decisions: answers[3] || 3,
-        privacy: answers[4] || 3,
-        development: answers[5] || 3
+        creativity: answers[1],
+        jobs: answers[2],
+        decisions: answers[3],
+        privacy: answers[4],
+        development: answers[5]
       };
       
       // Convert to AiAttitude array format expected by saveAttitudes
       const aiAttitudes = [
-        { id: '1', attitude: 'creativity', strength: attitudeScores.creativity, description: 'AI in creative fields' },
-        { id: '2', attitude: 'jobs', strength: attitudeScores.jobs, description: 'AI impact on jobs' },
-        { id: '3', attitude: 'decisions', strength: attitudeScores.decisions, description: 'AI in decision-making' },
-        { id: '4', attitude: 'privacy', strength: attitudeScores.privacy, description: 'AI impact on privacy' },
-        { id: '5', attitude: 'development', strength: attitudeScores.development, description: 'Pace of AI development' }
+        { 
+          id: '1', 
+          attitude: 'creativity', 
+          strength: attitudeScores.creativity, 
+          description: 'AI in creative fields',
+          lowLabel: 'Very concerned',
+          highLabel: 'Very positive'
+        },
+        { 
+          id: '2', 
+          attitude: 'jobs', 
+          strength: attitudeScores.jobs, 
+          description: 'AI impact on jobs',
+          lowLabel: 'Very concerned',
+          highLabel: 'Very positive'
+        },
+        { 
+          id: '3', 
+          attitude: 'decisions', 
+          strength: attitudeScores.decisions, 
+          description: 'AI in decision-making',
+          lowLabel: 'Very concerned',
+          highLabel: 'Very positive'
+        },
+        { 
+          id: '4', 
+          attitude: 'privacy', 
+          strength: attitudeScores.privacy, 
+          description: 'AI impact on privacy',
+          lowLabel: 'Very concerned',
+          highLabel: 'Very positive'
+        },
+        { 
+          id: '5', 
+          attitude: 'development', 
+          strength: attitudeScores.development, 
+          description: 'Pace of AI development',
+          lowLabel: 'Too fast',
+          highLabel: 'Too slow'
+        }
       ];
       
-      // Update game state using saveAttitudes instead of updateAttitudes
-      saveAttitudes(aiAttitudes);
-      
-      // Navigate to next phase
-      router.push('/focus');
+      try {
+        // Save attitudes to the game store - this will trigger phase change in the store
+        // which will be handled by GamePhaseNavigator for navigation
+        saveAttitudes(aiAttitudes);
+        
+        // Add to console for debugging
+        console.log('Attitudes saved successfully:', aiAttitudes);
+        
+        // No direct navigation - let the GamePhaseNavigator handle it
+        // The saveAttitudes function in useGameStore will update the gamePhase
+        // which will trigger the GamePhaseNavigator to handle navigation
+      } catch (error) {
+        console.error('Error saving attitudes:', error);
+      }
     }
   };
   
@@ -129,89 +180,101 @@ export function StepByStepAttitudeAssessment() {
   };
   
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold text-center mb-2">AI Attitude Assessment</h1>
-      <p className="text-center text-gray-600 mb-8">
-        Help us understand your perspective on artificial intelligence
-      </p>
+    <div className="container max-w-4xl mx-auto px-4 py-8">
+      <div className="text-center mb-6">
+        <h1 className="text-3xl md:text-4xl font-bold text-gradient mb-2">AI Attitude Assessment</h1>
+        <p className="text-lg text-muted-foreground">Help us understand your perspective on artificial intelligence</p>
+      </div>
       
-      <div className="mb-8">
-        <Progress value={progress} className="h-2" />
-        <div className="text-right mt-1 text-sm text-gray-600">
-          {Math.round(progress)}% Complete
+      <div className="assessment-progress mb-4">
+        <div className="assessment-progress-bar" style={{ width: `${progress}%` }}></div>
+      </div>
+      
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center">
+          {attitudeQuestions.map((_, index) => (
+            <div 
+              key={index}
+              onClick={() => handleQuestionSelect(index)}
+              className={`round-indicator mx-1 cursor-pointer ${
+                index < currentQuestionIndex ? 'completed' : 
+                index === currentQuestionIndex ? 'active' : ''
+              }`}
+            >
+              {index + 1}
+            </div>
+          ))}
         </div>
+        <span className="text-sm font-medium neon-text">{Math.round(progress)}% Complete</span>
       </div>
       
-      <div className="flex justify-center mb-8">
-        {attitudeQuestions.map((_, index) => (
-          <button
-            key={index}
-            onClick={() => handleQuestionSelect(index)}
-            className={`w-12 h-12 rounded-full mx-2 flex items-center justify-center ${
-              index === currentQuestionIndex
-                ? 'bg-blue-500 text-white'
-                : index < currentQuestionIndex
-                ? 'bg-blue-200 text-blue-800'
-                : 'bg-gray-200 text-gray-800'
-            }`}
-          >
-            {index + 1}
-          </button>
-        ))}
-      </div>
-      
-      <Card className="max-w-3xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-xl">
-            Question {currentQuestionIndex + 1}
-          </CardTitle>
-          <p className="text-gray-600">
+      <Card className="challenge-card w-full">
+        <CardHeader className="text-center border-b border-border/30 pb-4">
+          <CardTitle className="text-2xl font-bold">Question {currentQuestionIndex + 1}</CardTitle>
+          <CardDescription className="text-lg mt-2">
             {currentQuestion.description}
-          </p>
+          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <h3 className="text-xl font-semibold mb-6">{currentQuestion.question}</h3>
-          
-          <div className="grid grid-cols-5 gap-2 mb-8">
-            {currentQuestion.options.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => handleAnswer(option.value)}
-                className={`p-4 border rounded-md text-center hover:bg-gray-100 ${
-                  answers[currentQuestion.id] === option.value
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-300'
-                }`}
-              >
-                <div className="text-xl font-bold mb-2">{option.value}</div>
-                <div className="text-sm">{option.label}</div>
-              </button>
-            ))}
+        <CardContent className="space-y-6 pt-6">
+          <div className="glass p-6 rounded-lg cyberpunk-grid">
+            <h3 className="text-xl font-semibold mb-6 neon-text">{currentQuestion.question}</h3>
+            
+            <div className="grid grid-cols-5 gap-2 mb-4">
+              {currentQuestion.options.map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => handleAnswer(option.value)}
+                  className={`p-4 border rounded-md text-center hover:bg-gray-100 transition-all ${
+                    answers[currentQuestion.id] === option.value
+                      ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/30 shadow-glow'
+                      : 'border-gray-300 dark:border-gray-700'
+                  }`}
+                >
+                  <div className="text-xl font-bold mb-2">{option.value}</div>
+                  <div className="text-sm">{option.label}</div>
+                </button>
+              ))}
+            </div>
+            
+            <div className="flex justify-between mt-2 px-1 text-sm text-muted-foreground">
+              <span>{currentQuestion.options[0].label}</span>
+              <span>{currentQuestion.options[currentQuestion.options.length - 1].label}</span>
+            </div>
           </div>
           
-          <div className="flex justify-between">
-            <Button
-              onClick={handlePrevious}
-              disabled={currentQuestionIndex === 0}
-              variant="outline"
-            >
-              Previous
-            </Button>
-            <Button
-              onClick={handleNext}
-              disabled={!answers[currentQuestion.id]}
-            >
-              {currentQuestionIndex < attitudeQuestions.length - 1
-                ? 'Next Question'
-                : 'Complete Assessment'}
-            </Button>
+          <div className="data-card p-4 rounded-lg">
+            <h4 className="font-medium mb-2">About this question</h4>
+            <p className="text-sm text-muted-foreground">
+              Your response helps us understand your perspective on {currentQuestion.description.toLowerCase()}
+            </p>
           </div>
         </CardContent>
+        
+        <CardFooter className="flex flex-col sm:flex-row justify-between gap-4 pt-4 border-t border-border/30">
+          <Button 
+            variant="glass" 
+            onClick={handlePrevious}
+            disabled={currentQuestionIndex === 0}
+            className="w-full sm:w-1/3"
+          >
+            Previous
+          </Button>
+          
+          <Button 
+            variant="holographic" 
+            onClick={handleNext}
+            className="w-full sm:w-1/3"
+          >
+            {currentQuestionIndex < attitudeQuestions.length - 1
+              ? 'Next Question'
+              : 'Complete Assessment'}
+          </Button>
+        </CardFooter>
       </Card>
       
-      <p className="text-center mt-8 text-gray-600">
-        Your responses help us identify your unique human strengths
-      </p>
+      <div className="mt-6 text-center text-sm text-muted-foreground">
+        <p>Your responses help us identify your unique human strengths</p>
+      </div>
     </div>
   );
 }
