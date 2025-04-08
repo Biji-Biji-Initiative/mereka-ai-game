@@ -35,10 +35,24 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
   useEffect(() => {
     console.log(`GamePhaseWrapper: current=${gamePhase}, target=${targetPhase}`);
     
-    // Only set the phase if coming from WELCOME (initial state) or storage rehydration
+    // Set the phase if coming from WELCOME (initial state) or storage rehydration
     if (gamePhase === GamePhase.WELCOME && targetPhase !== GamePhase.WELCOME) {
       console.log(`GamePhaseWrapper: Setting phase to ${targetPhase} from initial state`);
       setGamePhase(targetPhase);
+    }
+    
+    // Handle direct URL navigation to a page that doesn't match current phase
+    // This ensures the game phase is synchronized with the URL
+    if (gamePhase !== targetPhase && targetPhase !== GamePhase.WELCOME) {
+      // Check if we're navigating forward (to a phase that comes after the current one)
+      const isForwardNavigation = Object.values(GamePhase).indexOf(targetPhase) > 
+                                 Object.values(GamePhase).indexOf(gamePhase);
+      
+      // Only update phase if navigating forward or if we're on the welcome page
+      if (isForwardNavigation || gamePhase === GamePhase.WELCOME) {
+        console.log(`GamePhaseWrapper: Synchronizing phase to match URL: ${targetPhase}`);
+        setGamePhase(targetPhase);
+      }
     }
   }, [gamePhase, setGamePhase, targetPhase]);
   
@@ -52,66 +66,72 @@ export default function GamePhaseWrapper({ children, targetPhase }: GamePhaseWra
       return;
     }
     
-    // Context is required for all phases after WELCOME
-    if (!isContextCompleted) {
-      console.log('Prerequisites not met: Context not completed, redirecting...');
-      router.push('/context');
-      return;
-    }
-    
-    // Traits are required for FOCUS and beyond
-    if (targetPhase === GamePhase.FOCUS || 
-        targetPhase === GamePhase.ROUND1 || 
-        targetPhase === GamePhase.ROUND2 || 
-        targetPhase === GamePhase.ROUND3 || 
-        targetPhase === GamePhase.RESULTS) {
-      
-      if (!isTraitsCompleted) {
-        console.log('Prerequisites not met: Traits not completed, redirecting...');
-        router.push('/traits');
+    try {
+      // Context is required for all phases after WELCOME
+      if (!isContextCompleted) {
+        console.log('Prerequisites not met: Context not completed, redirecting...');
+        router.push('/context');
         return;
       }
       
-      // Attitudes are required for FOCUS and beyond (except when on the attitudes page)
-      if (!isAttitudesCompleted && targetPhase !== GamePhase.ATTITUDES) {
-        console.log('Prerequisites not met: Attitudes not completed, redirecting...');
-        router.push('/attitudes');
-        return;
+      // Traits are required for FOCUS and beyond
+      if (targetPhase === GamePhase.FOCUS || 
+          targetPhase === GamePhase.ROUND1 || 
+          targetPhase === GamePhase.ROUND2 || 
+          targetPhase === GamePhase.ROUND3 || 
+          targetPhase === GamePhase.RESULTS) {
+        
+        if (!isTraitsCompleted) {
+          console.log('Prerequisites not met: Traits not completed, redirecting...');
+          router.push('/traits');
+          return;
+        }
+        
+        // Attitudes are required for FOCUS and beyond (except when on the attitudes page)
+        if (!isAttitudesCompleted && targetPhase !== GamePhase.ATTITUDES) {
+          console.log('Prerequisites not met: Attitudes not completed, redirecting...');
+          router.push('/attitudes');
+          return;
+        }
       }
-    }
-    
-    // Focus is required for ROUND1 and beyond
-    if (targetPhase === GamePhase.ROUND1 || 
-        targetPhase === GamePhase.ROUND2 || 
-        targetPhase === GamePhase.ROUND3 || 
-        targetPhase === GamePhase.RESULTS) {
       
-      if (!isFocusCompleted) {
-        console.log('Prerequisites not met: Focus not completed, redirecting...');
-        router.push('/focus');
-        return;
+      // Focus is required for ROUND1 and beyond
+      if (targetPhase === GamePhase.ROUND1 || 
+          targetPhase === GamePhase.ROUND2 || 
+          targetPhase === GamePhase.ROUND3 || 
+          targetPhase === GamePhase.RESULTS) {
+        
+        if (!isFocusCompleted) {
+          console.log('Prerequisites not met: Focus not completed, redirecting...');
+          router.push('/focus');
+          return;
+        }
       }
-    }
-    
-    // Round1 is required for ROUND2 and beyond
-    if (targetPhase === GamePhase.ROUND2 || 
-        targetPhase === GamePhase.ROUND3 || 
-        targetPhase === GamePhase.RESULTS) {
       
-      if (!isRound1Completed) {
-        console.log('Prerequisites not met: Round 1 not completed, redirecting...');
-        router.push('/round1');
-        return;
+      // Round1 is required for ROUND2 and beyond
+      if (targetPhase === GamePhase.ROUND2 || 
+          targetPhase === GamePhase.ROUND3 || 
+          targetPhase === GamePhase.RESULTS) {
+        
+        if (!isRound1Completed) {
+          console.log('Prerequisites not met: Round 1 not completed, redirecting...');
+          router.push('/round1');
+          return;
+        }
       }
-    }
-    
-    // Round2 is required for ROUND3 and RESULTS
-    if (targetPhase === GamePhase.ROUND3 || targetPhase === GamePhase.RESULTS) {
-      if (!isRound2Completed) {
-        console.log('Prerequisites not met: Round 2 not completed, redirecting...');
-        router.push('/round2');
-        return;
+      
+      // Round2 is required for ROUND3 and RESULTS
+      if (targetPhase === GamePhase.ROUND3 || targetPhase === GamePhase.RESULTS) {
+        if (!isRound2Completed) {
+          console.log('Prerequisites not met: Round 2 not completed, redirecting...');
+          router.push('/round2');
+          return;
+        }
       }
+    } catch (error) {
+      console.error('Error in prerequisite checks:', error);
+      // If there's an error in the prerequisite checks, we should still allow navigation
+      // to prevent users from getting stuck
     }
   }, [
     targetPhase, 

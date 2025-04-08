@@ -8,6 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { useGameStore, GamePhase } from '@/store/useGameStore';
 import AIVisualizer from '@/components/ui/ai-visualizer';
 import { useGenerateChallenge, useSubmitResponse } from '@/services/api/services';
+import { EvaluationResult, useEvaluateRound } from '@/services/evaluationService';
+import RoundEvaluation from '@/components/evaluation/RoundEvaluation';
 // Import types from centralized type system
 // import { GenerateChallengeRequest } from '@/types/api';
 
@@ -25,6 +27,9 @@ export default function Round1() {
   const [userResponse, setUserResponse] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAiThinking, setShowAiThinking] = useState(false);
+  const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null);
+  const [showEvaluation, setShowEvaluation] = useState(false);
   
   // Get current game state values and actions with individual selectors
   const traits = useGameStore(state => state.personality?.traits);
@@ -39,6 +44,9 @@ export default function Round1() {
   
   // Submit response mutation
   const submitResponseMutation = useSubmitResponse();
+  
+  // Get evaluation function
+  const evaluateRound = useEvaluateRound();
   
   // Import additional store actions
   const saveChallenge = useGameStore(state => state.saveChallenge);
@@ -122,9 +130,6 @@ export default function Round1() {
     
   }, [focus, completedPhase, generateChallenge, router]);
   
-  // State for AI thinking visualization
-  const [showAiThinking, setShowAiThinking] = useState(false);
-
   // Handle user response submission
   const handleSubmit = async () => {
     if (!userResponse.trim()) {
@@ -148,22 +153,41 @@ export default function Round1() {
       // Save response to game state using the correct store action
       saveRound1Response(userResponse);
       
-      // Set game phase to ROUND2 after successful submission
-      setGamePhase(GamePhase.ROUND2);
-      
-      // Simulate AI thinking time
-      setTimeout(() => {
+      // Evaluate the response
+      if (focus) {
+        const evaluationResult = await evaluateRound(
+          1,
+          { userResponse: userResponse },
+          challenge || '',
+          focus.id
+        );
+        
+        setEvaluation(evaluationResult);
+        
+        // Show evaluation after AI thinking animation
+        setTimeout(() => {
+          setShowAiThinking(false);
+          setShowEvaluation(true);
+        }, 2000);
+      } else {
+        // If we can't evaluate, just proceed to next round
+        setGamePhase(GamePhase.ROUND2);
         setShowAiThinking(false);
-        // Navigate to next round
         router.push('/round2');
-      }, 3000);
+      }
     } catch (error) {
       console.error('Error submitting response:', error);
       setShowAiThinking(false);
-    } finally {
       setIsSubmitting(false);
     }
   };
+  
+  // Handle continuing to next round after evaluation
+  const handleContinue = useCallback(() => {
+    setShowEvaluation(false);
+    setGamePhase(GamePhase.ROUND2);
+    router.push('/round2');
+  }, [router, setGamePhase]);
   
   // Loading state
   if (isLoading) {
@@ -178,54 +202,63 @@ export default function Round1() {
   
   return (
     <div className="space-y-8">
-    <Card className="w-full max-w-4xl mx-auto shadow-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
-          Round 1: Define The Challenge
-        </CardTitle>
-        <CardDescription>
-          In this round, we&apos;ll define a challenge that highlights your unique human capabilities in your chosen focus area.
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-6">
-        <div className="border-l-4 border-indigo-500 pl-4 py-3 bg-indigo-50 dark:bg-indigo-900/20">
-          <h3 className="font-semibold text-lg mb-2">Your Challenge:</h3>
-          <p className="text-gray-800 dark:text-gray-200">
-            {challenge}
-          </p>
-        </div>
+    {!showEvaluation ? (
+      <Card className="w-full max-w-4xl mx-auto shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+            Round 1: Define The Challenge
+          </CardTitle>
+          <CardDescription>
+            In this round, we&apos;ll define a challenge that highlights your unique human capabilities in your chosen focus area.
+          </CardDescription>
+        </CardHeader>
         
-        <div className="space-y-3">
-          <h3 className="font-semibold text-lg">Your Response:</h3>
-          <Textarea 
-            value={userResponse}
-            onChange={(e) => setUserResponse(e.target.value)}
-            placeholder="Type your response here..."
-            className="min-h-[150px] resize-y"
-          />
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Consider how your human traits and capabilities provide unique value in addressing this challenge.
-          </p>
-        </div>
-      </CardContent>
-      
-      <CardFooter className="flex justify-between">
-        <Button 
-          variant="outline" 
-          onClick={() => router.push('/focus')}
-        >
-          Back
-        </Button>
-        <Button 
-          onClick={handleSubmit}
-          disabled={isSubmitting || !userResponse.trim()}
-          className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800"
-        >
-          {isSubmitting ? 'Submitting...' : 'Continue to Round 2'}
-        </Button>
-      </CardFooter>
-    </Card>
+        <CardContent className="space-y-6">
+          <div className="border-l-4 border-indigo-500 pl-4 py-3 bg-indigo-50 dark:bg-indigo-900/20">
+            <h3 className="font-semibold text-lg mb-2">Your Challenge:</h3>
+            <p className="text-gray-800 dark:text-gray-200">
+              {challenge}
+            </p>
+          </div>
+          
+          <div className="space-y-3">
+            <h3 className="font-semibold text-lg">Your Response:</h3>
+            <Textarea 
+              value={userResponse}
+              onChange={(e) => setUserResponse(e.target.value)}
+              placeholder="Type your response here..."
+              className="min-h-[150px] resize-y"
+            />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Consider how your human traits and capabilities provide unique value in addressing this challenge.
+            </p>
+          </div>
+        </CardContent>
+        
+        <CardFooter className="flex justify-between">
+          <Button 
+            variant="outline" 
+            onClick={() => router.push('/focus')}
+          >
+            Back
+          </Button>
+          <Button 
+            onClick={handleSubmit}
+            disabled={isSubmitting || !userResponse.trim()}
+            className="bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-800"
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Response'}
+          </Button>
+        </CardFooter>
+      </Card>
+    ) : (
+      <RoundEvaluation 
+        roundNumber={1}
+        evaluation={evaluation!}
+        onContinue={handleContinue}
+        isLastRound={false}
+      />
+    )}
     
     {/* AI Thinking Visualization */}
     {showAiThinking && (

@@ -8,7 +8,7 @@
  */
 
 import { RoundResponse } from '@/store/useGameStore';
-import { useRivalStore } from '@/store/useRivalStore';
+import { useRivalStore } from '@/store/rival-store';
 
 // Define evaluation metrics
 export interface EvaluationMetrics {

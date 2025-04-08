@@ -121,7 +121,50 @@ export default function GamePhaseNavigator() {
       console.log('[Nav Effect 2] Focus complete, challenge ready. Setting phase to ROUND1.');
       setGamePhase(GamePhase.ROUND1);
     }
-  }, [gamePhase, currentChallenge, setGamePhase]);
+    
+    // Handle phase completion checks and transitions
+    try {
+      // Check if current phase is completed but we haven't moved to the next phase
+      const isCurrentPhaseCompleted = getIsPhaseCompleted(gamePhase);
+      
+      if (isCurrentPhaseCompleted) {
+        // Determine the next phase based on the current phase
+        let nextPhase: GamePhase | null = null;
+        
+        switch (gamePhase) {
+          case GamePhase.CONTEXT:
+            nextPhase = GamePhase.TRAITS;
+            break;
+          case GamePhase.TRAITS:
+            nextPhase = GamePhase.ATTITUDES;
+            break;
+          case GamePhase.ATTITUDES:
+            nextPhase = GamePhase.FOCUS;
+            break;
+          case GamePhase.ROUND1:
+            nextPhase = GamePhase.ROUND2;
+            break;
+          case GamePhase.ROUND2:
+            nextPhase = GamePhase.ROUND3;
+            break;
+          case GamePhase.ROUND3:
+            nextPhase = GamePhase.RESULTS;
+            break;
+          default:
+            // No transition needed for other phases
+            break;
+        }
+        
+        // If we determined a next phase, set it
+        if (nextPhase && gamePhase !== nextPhase) {
+          console.log(`[Nav Effect 2] Phase ${gamePhase} completed. Transitioning to ${nextPhase}.`);
+          setGamePhase(nextPhase);
+        }
+      }
+    } catch (error) {
+      console.error('[Nav Effect 2] Error checking phase completion:', error);
+    }
+  }, [gamePhase, currentChallenge, setGamePhase, getIsPhaseCompleted]);
 
   /**
    * Effect 3: Handle Navigation
@@ -145,9 +188,24 @@ export default function GamePhaseNavigator() {
     if (currentPath !== targetRoute) {
       console.log(`[Nav Effect 3] Navigating from ${currentPath} to ${targetRoute} (Phase: ${gamePhase})`);
       lastNavigation.current = { from: currentPath, to: targetRoute, timestamp: now };
-      router.push(targetRoute);
+      
+      try {
+        // Check if phase is completed before navigation
+        const isCurrentPhaseCompleted = getIsPhaseCompleted(gamePhase);
+        
+        // Only navigate if the current phase is completed or we're on the welcome page
+        if (isCurrentPhaseCompleted || gamePhase === GamePhase.WELCOME || currentPath === '/') {
+          router.push(targetRoute);
+        } else {
+          console.warn(`[Nav Effect 3] Not navigating to ${targetRoute} because current phase ${gamePhase} is not completed`);
+        }
+      } catch (error) {
+        console.error(`[Nav Effect 3] Navigation error:`, error);
+        // Fallback: still try to navigate even if there was an error checking completion
+        router.push(targetRoute);
+      }
     }
-  }, [gamePhase, pathname, router]); 
+  }, [gamePhase, pathname, router, getIsPhaseCompleted]); 
   
   /**
    * Effect 4: Reset challenge generation trigger when leaving FOCUS phase
