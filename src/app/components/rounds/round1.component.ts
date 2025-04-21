@@ -44,10 +44,13 @@ export class Round1Component extends BaseRoundComponent {
   protected override async submitResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
+    const aiResponse = await this.gameService.generateAIResponse(this.challenge.id);
+
     await this.gameService.submitResponse({
       challengeId: this.challenge.id,
       response: this.userResponse,
-      round: 1
+      round: 1,
+      aiResponse
     });
   }
 
@@ -57,7 +60,7 @@ export class Round1Component extends BaseRoundComponent {
     const evaluation = await this.gameService.evaluateResponse(
       1,
       this.userResponse,
-      this.challenge.description
+      this.challenge.id
     );
 
     this.evaluation = evaluation;

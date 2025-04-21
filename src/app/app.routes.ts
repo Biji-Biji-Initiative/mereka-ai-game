@@ -9,6 +9,7 @@ import { FocusComponent } from './pages/focus/focus.component';
 import { Round1Component } from './components/rounds/round1.component';
 import { Round2Component } from './components/rounds/round2.component';
 import { Round3Component } from './components/rounds/round3.component';
+import { ResultsComponent } from './components/results/results.component';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
@@ -47,6 +48,10 @@ export const routes: Routes = [
   {
     path: 'round3',
     component: Round3Component,
-    data: { previous: 'round2' }
+    data: { previous: 'round2', next: 'results' }
+  },
+  {
+    path: 'results',
+    component: ResultsComponent
   }
 ];

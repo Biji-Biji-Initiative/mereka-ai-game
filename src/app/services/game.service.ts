@@ -1,4 +1,6 @@
 import { Injectable } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { ResultsData } from './results.service';
 
 interface RoundData {
   response?: string;
@@ -176,5 +178,89 @@ export class GameService {
 
   async saveProfileId(profileId: string): Promise<void> {
     this.profileId = profileId;
+  }
+
+  getResults(): Observable<ResultsData> {
+    // Get data from all rounds
+    const round1Data = this.getRoundData(1);
+    const round2Data = this.getRoundData(2);
+    const round3Data = this.getRoundData(3);
+
+    // Create results data based on the rounds
+    const results: ResultsData = {
+      overallScore: Math.floor((
+        (round1Data.evaluation?.metrics?.overall ?? 0) +
+        (round2Data.evaluation?.metrics?.overall ?? 0) +
+        (round3Data.evaluation?.metrics?.overall ?? 0)
+      ) / 3),
+      focusArea: {
+        name: "Creative Problem Solving",
+        description: "Your ability to approach problems with innovative and unique solutions"
+      },
+      rounds: {
+        round1: {
+          score: round1Data.evaluation?.metrics.overall || 0,
+          strengths: round1Data.evaluation?.strengths || [],
+          areas: round1Data.evaluation?.improvements || [],
+          comparison: {
+            humanScore: round1Data.evaluation?.comparison.userScore || 0,
+            aiScore: round1Data.evaluation?.comparison.rivalScore || 0,
+            difference: (round1Data.evaluation?.comparison.userScore || 0) - (round1Data.evaluation?.comparison.rivalScore || 0)
+          }
+        },
+        round2: {
+          score: round2Data.evaluation?.metrics.overall || 0,
+          strengths: round2Data.evaluation?.strengths || [],
+          areas: round2Data.evaluation?.improvements || [],
+          comparison: {
+            humanScore: round2Data.evaluation?.comparison.userScore || 0,
+            aiScore: round2Data.evaluation?.comparison.rivalScore || 0,
+            difference: (round2Data.evaluation?.comparison.userScore || 0) - (round2Data.evaluation?.comparison.rivalScore || 0)
+          }
+        },
+        round3: {
+          score: round3Data.evaluation?.metrics.overall || 0,
+          strengths: round3Data.evaluation?.strengths || [],
+          areas: round3Data.evaluation?.improvements || [],
+          comparison: {
+            humanScore: round3Data.evaluation?.comparison.userScore || 0,
+            aiScore: round3Data.evaluation?.comparison.rivalScore || 0,
+            difference: (round3Data.evaluation?.comparison.userScore || 0) - (round3Data.evaluation?.comparison.rivalScore || 0)
+          }
+        }
+      },
+      badges: [
+        {
+          id: "creative-master",
+          name: "Creative Master",
+          description: "Demonstrated exceptional creative problem-solving abilities",
+          icon: "🎨"
+        },
+        {
+          id: "analytical-genius",
+          name: "Analytical Genius",
+          description: "Showed outstanding analytical and logical thinking",
+          icon: "🧠"
+        },
+        {
+          id: "communication-pro",
+          name: "Communication Pro",
+          description: "Excellent communication and articulation skills",
+          icon: "💬"
+        }
+      ],
+      insights: [
+        "Your creative approach consistently outperformed AI solutions",
+        "You showed strong adaptability across different challenge types",
+        "Your communication skills helped convey complex ideas effectively"
+      ],
+      recommendations: [
+        "Consider exploring more technical aspects in your solutions",
+        "Try incorporating more quantitative analysis in your approach",
+        "Continue developing your pattern recognition skills"
+      ]
+    };
+
+    return of(results);
   }
 }
