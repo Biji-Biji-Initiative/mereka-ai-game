@@ -1,0 +1,42 @@
+<header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+    <nav class="container mx-auto px-4 py-3">
+        <div class="flex items-center justify-between">
+            <!-- Logo/Brand -->
+            <div class="flex items-center">
+                <a routerLink="/" class="text-xl font-bold text-gray-800 dark:text-white">
+                    AI Fight Club
+                </a>
+            </div>
+
+            <!-- Navigation Links -->
+            <div class="hidden md:flex items-center space-x-6">
+                <a routerLink="/game"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Game</a>
+                <a routerLink="/leaderboard"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Leaderboard</a>
+                <a routerLink="/challenges"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Challenges</a>
+            </div>
+
+            <!-- Auth Section -->
+            <div class="flex items-center space-x-4">
+                <ng-container *ngIf="!isAuthenticated">
+                    <a routerLink="/signin"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Login</a>
+                    <a routerLink="/signup"
+                        class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
+                        Register
+                    </a>
+                </ng-container>
+                <ng-container *ngIf="isAuthenticated">
+                    <button class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                        Profile
+                    </button>
+                    <button class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                        Logout
+                    </button>
+                </ng-container>
+            </div>
+        </div>
+    </nav>
+</header>

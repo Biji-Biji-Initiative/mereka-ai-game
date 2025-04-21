@@ -1,0 +1,81 @@
+<div class="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-4xl w-full space-y-8">
+    <!-- Progress Bar -->
+    <div class="relative">
+      <div class="overflow-hidden h-2 mb-4 text-xs flex rounded bg-blue-100">
+        <div [style.width.%]="progressPercentage"
+          class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-blue-500">
+        </div>
+      </div>
+      <!-- Progress Steps -->
+      <div class="flex justify-between -mt-2">
+        <ng-container *ngFor="let step of [].constructor(totalQuestions); let i = index">
+          <div class="flex flex-col items-center">
+            <div [class]="'w-8 h-8 flex items-center justify-center rounded-full text-sm font-medium ' +
+                            (i < currentQuestionIndex ? 'bg-blue-500 text-white' :
+                             i === currentQuestionIndex ? 'bg-blue-500 text-white ring-2 ring-blue-300' :
+                             'bg-blue-100 text-blue-600')">
+              {{i + 1}}
+            </div>
+          </div>
+        </ng-container>
+      </div>
+      <div class="text-right text-sm text-gray-500 mt-2">
+        {{progressPercentage}}% Complete
+      </div>
+    </div>
+
+    <!-- Question Card -->
+    <div class="bg-white shadow-lg rounded-lg p-8">
+      <div class="space-y-6">
+        <!-- Question Header -->
+        <div class="text-center mb-8">
+          <h2 class="text-2xl font-semibold text-gray-900">Question {{currentQuestionIndex + 1}}</h2>
+          <p class="text-gray-600 mt-2">{{question.subtitle}}</p>
+        </div>
+
+        <!-- Rating Scale Question -->
+        <div *ngIf="question.type === 'rating' && question.options">
+          <h3 class="text-xl font-medium text-gray-900 mb-4">{{question.title}}</h3>
+          <div class="flex justify-between items-center space-x-4">
+            <span class="text-sm text-gray-500">{{question.options.minLabel}}</span>
+            <div class="flex-1 flex justify-between">
+              <ng-container
+                *ngFor="let value of [].constructor(question.options.max - question.options.min + 1); let i = index">
+                <button (click)="onAnswerChange(i + question.options.min)" [class]="'w-12 h-12 rounded-full text-lg font-medium transition-colors duration-200 ' +
+                  (answer === i + question.options.min ?
+                  'bg-blue-500 text-white transform scale-110' :
+                  'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:scale-105')">
+                  {{i + question.options.min}}
+                </button>
+              </ng-container>
+            </div>
+            <span class="text-sm text-gray-500">{{question.options.maxLabel}}</span>
+          </div>
+        </div>
+
+        <!-- About Section -->
+        <div *ngIf="question.about" class="mt-8 pt-6 border-t border-gray-200">
+          <div class="flex items-start space-x-3">
+            <div class="flex-1">
+              <h4 class="text-lg font-medium text-gray-900">{{question.about.title}}</h4>
+              <p class="mt-1 text-sm text-gray-500">{{question.about.description}}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Navigation Buttons -->
+    <div class="flex justify-between mt-6">
+      <button (click)="onPrevious()" [disabled]="currentQuestionIndex === 0"
+        class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200">
+        Previous
+      </button>
+      <button (click)="onNext()"
+        class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 transition-colors duration-200">
+        {{currentQuestionIndex === totalQuestions - 1 ? 'Finish' : 'Next Question'}}
+      </button>
+    </div>
+  </div>
+</div>

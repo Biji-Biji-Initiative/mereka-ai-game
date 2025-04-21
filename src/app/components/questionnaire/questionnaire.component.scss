@@ -1,0 +1,57 @@
+// Progress bar animation
+@keyframes progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+// Rating button hover effect
+.rating-button {
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    transform: scale(1.05);
+  }
+
+  &.selected {
+    transform: scale(1.1);
+  }
+}
+
+// Question container
+.question-container {
+  transition: all 0.3s ease-in-out;
+}
+
+// Progress steps
+.step-indicator {
+  transition: all 0.3s ease-in-out;
+
+  &.completed {
+    background-color: #3B82F6;
+    color: white;
+  }
+
+  &.current {
+    background-color: #3B82F6;
+    color: white;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+  }
+}
+
+// About section
+.about-section {
+  border-left: 4px solid #3B82F6;
+  padding-left: 1rem;
+  margin-top: 2rem;
+
+  h4 {
+    color: #1F2937;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    color: #6B7280;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}

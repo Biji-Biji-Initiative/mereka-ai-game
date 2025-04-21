@@ -1,0 +1,4 @@
+<app-questionnaire [currentQuestionIndex]="currentQuestionIndex" [totalQuestions]="questions.length"
+    [question]="questions[currentQuestionIndex]" [answer]="answers[currentQuestionIndex]"
+    (answerChange)="onAnswerChange($event)" (nextQuestion)="onNextQuestion()" (previousQuestion)="onPreviousQuestion()">
+</app-questionnaire>

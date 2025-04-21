@@ -1,0 +1,77 @@
+<div class="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full space-y-8">
+        <div class="text-center">
+            <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+                Personal Context
+            </h1>
+            <p class="mt-2 text-lg text-gray-600 dark:text-gray-400">
+                Before we assess your human edge, we need to understand your professional context.
+                <br>
+                This helps us provide more relevant insights tailored to your specific situation.
+            </p>
+        </div>
+
+        <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-8">
+            <div class="max-w-md mx-auto">
+                <h2 class="text-2xl font-bold text-gray-900 dark:text-white text-center mb-2">
+                    Tell Us About Yourself
+                </h2>
+                <p class="text-gray-600 dark:text-gray-400 text-center mb-8">
+                    This information helps us personalize your human edge profile
+                </p>
+
+                <form (ngSubmit)="onSubmit()" class="space-y-6">
+                    <!-- Name -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Name
+                        </label>
+                        <input type="text" id="name" name="name" [(ngModel)]="userContext.name"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                            placeholder="Your name" required>
+                    </div>
+
+                    <!-- Email -->
+                    <div>
+                        <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Email
+                        </label>
+                        <input type="email" id="email" name="email" [(ngModel)]="userContext.email"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                            placeholder="your.email@example.com" required>
+                    </div>
+
+                    <!-- Professional Title -->
+                    <div>
+                        <label for="professionalTitle"
+                            class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Professional Title
+                        </label>
+                        <input type="text" id="professionalTitle" name="professionalTitle"
+                            [(ngModel)]="userContext.professionalTitle"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                            placeholder="e.g. Software Engineer, Designer, Manager" required>
+                    </div>
+
+                    <!-- Location -->
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                            Location
+                        </label>
+                        <input type="text" id="location" name="location" [(ngModel)]="userContext.location"
+                            class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                            placeholder="City, Country" required>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <div>
+                        <button type="submit"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                            Continue
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

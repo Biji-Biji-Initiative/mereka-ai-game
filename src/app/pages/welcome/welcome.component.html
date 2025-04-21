@@ -1,0 +1,53 @@
+<div class="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl w-full space-y-8 text-center">
+        <!-- Title Section -->
+        <div class="space-y-4">
+            <h1 class="text-6xl font-bold text-gray-900 dark:text-white relative inline-block">
+                AI Fight Club
+                <div class="absolute inset-0 blur-lg bg-blue-400 opacity-20 -z-10"></div>
+            </h1>
+            <p class="text-2xl text-blue-600 dark:text-blue-400">
+                Discover Your Competitive Edge in the Age of AI
+            </p>
+        </div>
+
+        <!-- Welcome Card -->
+        <div class="bg-white dark:bg-gray-800 shadow-lg rounded-lg p-8 mt-8">
+            <div class="space-y-6">
+                <div>
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
+                        Welcome, Challenger
+                    </h2>
+                    <p class="mt-2 text-lg text-gray-600 dark:text-gray-300">
+                        Discover your AI personality traits and challenge the system
+                    </p>
+                </div>
+
+                <!-- How It Works Section -->
+                <div class="mt-8">
+                    <h3 class="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                        How It Works
+                    </h3>
+                    <div class="space-y-4">
+                        <div *ngFor="let step of steps" class="flex items-start">
+                            <div
+                                [class]="'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ' +
+                (step.number === 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300')">
+                                {{ step.number }}
+                            </div>
+                            <p class="ml-4 text-lg text-gray-600 dark:text-gray-300">{{ step.text }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="mt-8">
+                    <a routerLink="/context"
+                        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
+                        Get Started
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
