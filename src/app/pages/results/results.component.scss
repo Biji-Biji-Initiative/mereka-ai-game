@@ -1,0 +1,24 @@
+:host {
+  display: block;
+}
+
+// Add any additional custom styles here
+.badge-icon {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.insight-bullet {
+  color: var(--ai-purple);
+}
+
+.recommendation-bullet {
+  color: var(--ai-blue);
+}
+
+// Responsive adjustments
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}

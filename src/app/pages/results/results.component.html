@@ -1,0 +1,112 @@
+<div class="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Overall Score -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">Your AI Fight Club Performance</h1>
+                <div class="text-6xl font-bold text-indigo-600 mb-4">{{ results?.overallScore ?? 0 }}%</div>
+                <p class="text-xl text-gray-600">Overall Score</p>
+            </div>
+        </div>
+
+        <!-- Focus Area -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Focus Area</h2>
+            <div class="bg-indigo-50 rounded-lg p-6">
+                <h3 class="text-xl font-semibold text-indigo-900 mb-2">{{ results?.focusArea?.name ?? 'Loading...' }}
+                </h3>
+                <p class="text-gray-700">{{ results?.focusArea?.description ?? 'Loading...' }}</p>
+            </div>
+        </div>
+
+        <!-- Round Performance -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Round Performance</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <ng-container *ngFor="let round of rounds">
+                    <div class="bg-gray-50 rounded-lg p-6" *ngIf="results?.rounds as roundsData">
+                        <h3 class="text-xl font-semibold text-gray-900 mb-4">Round {{ round.slice(-1) }}</h3>
+                        <div class="text-3xl font-bold text-indigo-600 mb-4">{{ roundsData[round]?.score ?? 0 }}%</div>
+                        <div class="space-y-4">
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-2">Strengths</h4>
+                                <ul class="list-disc list-inside text-gray-600">
+                                    <li *ngFor="let strength of roundsData[round]?.strengths ?? []">{{ strength }}</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h4 class="font-medium text-gray-900 mb-2">Areas for Improvement</h4>
+                                <ul class="list-disc list-inside text-gray-600">
+                                    <li *ngFor="let area of roundsData[round]?.areas ?? []">{{ area }}</li>
+                                </ul>
+                            </div>
+                            <div class="border-t pt-4">
+                                <h4 class="font-medium text-gray-900 mb-2">Human vs AI Comparison</h4>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">You</span>
+                                    <span class="text-lg font-semibold text-indigo-600">{{
+                                        roundsData[round]?.comparison?.humanScore ?? 0 }}%</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-gray-600">AI</span>
+                                    <span class="text-lg font-semibold text-gray-600">{{
+                                        roundsData[round]?.comparison?.aiScore ?? 0 }}%</span>
+                                </div>
+                                <div class="text-sm text-gray-500 mt-2">
+                                    Difference: {{ (roundsData[round]?.comparison?.difference ?? 0) > 0 ? '+' : '' }}{{
+                                    roundsData[round]?.comparison?.difference ?? 0 }}%
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </ng-container>
+            </div>
+        </div>
+
+        <!-- Badges -->
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Your Badges</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div *ngFor="let badge of results?.badges ?? []" class="bg-gray-50 rounded-lg p-6 text-center">
+                    <div class="text-4xl mb-4">{{ badge.icon }}</div>
+                    <h3 class="text-xl font-semibold text-gray-900 mb-2">{{ badge.name }}</h3>
+                    <p class="text-gray-600">{{ badge.description }}</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Insights & Recommendations -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Key Insights</h2>
+                <ul class="space-y-4">
+                    <li *ngFor="let insight of results?.insights ?? []" class="flex items-start">
+                        <span class="text-indigo-600 mr-2">•</span>
+                        <span class="text-gray-700">{{ insight }}</span>
+                    </li>
+                </ul>
+            </div>
+            <div class="bg-white rounded-lg shadow-lg p-8">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Recommendations</h2>
+                <ul class="space-y-4">
+                    <li *ngFor="let recommendation of results?.recommendations ?? []" class="flex items-start">
+                        <span class="text-indigo-600 mr-2">•</span>
+                        <span class="text-gray-700">{{ recommendation }}</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-center space-x-4">
+            <button
+                class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
+                Share Results
+            </button>
+            <button routerLink="/"
+                class="bg-gray-200 text-gray-800 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+                Start New Challenge
+            </button>
+        </div>
+    </div>
+</div>

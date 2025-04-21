@@ -9,7 +9,7 @@ import { FocusComponent } from './pages/focus/focus.component';
 import { Round1Component } from './components/rounds/round1.component';
 import { Round2Component } from './components/rounds/round2.component';
 import { Round3Component } from './components/rounds/round3.component';
-import { ResultsComponent } from './components/results/results.component';
+import { ResultsComponent } from './pages/results/results.component';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
