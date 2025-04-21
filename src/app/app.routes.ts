@@ -5,6 +5,7 @@ import { WelcomeComponent } from './pages/welcome/welcome.component';
 import { ContextComponent } from './pages/context/context.component';
 import { TraitsComponent } from './pages/traits/traits.component';
 import { AttitudesComponent } from './pages/attitudes/attitudes.component';
+import { FocusComponent } from './pages/focus/focus.component';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
@@ -22,6 +23,12 @@ export const routes: Routes = [
   },
   {
     path: 'attitudes',
-    component: AttitudesComponent
+    component: AttitudesComponent,
+    data: { next: 'focus' }
+  },
+  {
+    path: 'focus',
+    component: FocusComponent,
+    data: { previous: 'attitudes', next: 'round1' }
   }
 ];
