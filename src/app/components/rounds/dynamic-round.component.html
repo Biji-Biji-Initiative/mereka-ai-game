@@ -10,24 +10,11 @@
     <div *ngIf="!isLoading && !showEvaluation" class="card w-full max-w-4xl mx-auto shadow-lg">
         <!-- Card Header -->
         <div class="card-header">
-            <h2 class="text-2xl font-bold text-primary">Round {{roundNumber}}: {{challenge?.title}}</h2>
-            <p class="text-gray-600 dark:text-gray-300">
-                <ng-content select="[roundDescription]"></ng-content>
-            </p>
+            <h2 class="text-2xl font-bold text-primary">{{challenge?.title}}</h2>
         </div>
 
         <!-- Card Content -->
         <div class="card-content space-y-6">
-            <!-- Timer and Progress -->
-            <div class="flex justify-between items-center">
-                <div class="progress-bar w-2/3">
-                    <div class="h-2 bg-primary" [style.width.%]="progress"></div>
-                </div>
-                <div class="timer text-lg">
-                    {{getFormattedTime()}}
-                </div>
-            </div>
-
             <!-- Challenge Description -->
             <div class="border-l-4 border-primary p-4 bg-gray-50 dark:bg-gray-800">
                 <h3 class="font-semibold text-lg mb-2">Challenge:</h3>
@@ -36,20 +23,21 @@
                 </p>
             </div>
 
-            <!-- Previous Round Content -->
-            <ng-content select="[previousRoundContent]"></ng-content>
-
-            <!-- AI Response (for Round 2 & 3) -->
-            <ng-content select="[aiResponse]"></ng-content>
+            <!-- Previous Round Responses -->
+            <div *ngIf="Object.keys(previousResponses).length > 0" class="space-y-4">
+                <h3 class="font-semibold text-lg">Previous Responses:</h3>
+                <div *ngFor="let round of Object.keys(previousResponses)"
+                    class="border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
+                    <h4 class="font-medium mb-2">Round {{round}}:</h4>
+                    <p class="text-gray-800 dark:text-gray-200">{{previousResponses[round]}}</p>
+                </div>
+            </div>
 
             <!-- User Response Section -->
             <div class="space-y-3">
                 <h3 class="font-semibold text-lg">Your Response:</h3>
                 <textarea [(ngModel)]="userResponse" class="w-full min-h-[150px] p-3 border rounded-lg resize-y"
                     placeholder="Type your response here..."></textarea>
-                <p class="text-sm text-gray-500">
-                    <ng-content select="[responseHint]"></ng-content>
-                </p>
             </div>
         </div>
 
@@ -58,8 +46,8 @@
             <button class="btn btn-outline" (click)="router.navigate(['/focus'])" *ngIf="roundNumber === 1">
                 Back
             </button>
-            <button class="btn btn-primary" [disabled]="isSubmitting || !userResponse.trim()" (click)="handleSubmit()">
-                {{isSubmitting ? 'Submitting...' : 'Submit Response'}}
+            <button class="btn btn-primary" [disabled]="!userResponse.trim()" (click)="submitResponse()">
+                Submit Response
             </button>
         </div>
     </div>
@@ -143,7 +131,7 @@
                 </div>
             </div>
 
-            <!-- Badges (Round 3) -->
+            <!-- Badges -->
             <div *ngIf="evaluation?.badges?.length" class="mt-6">
                 <h3 class="font-semibold text-lg mb-3">Badges Earned</h3>
                 <div class="flex flex-wrap gap-2">

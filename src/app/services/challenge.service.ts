@@ -2,28 +2,11 @@ import { Injectable } from '@angular/core';
 import { Firestore } from '@angular/fire/firestore';
 import { BaseService } from './base.service';
 import { UserService } from './user.service';
-
-export interface ChallengeResponse {
-  challengeId: string;
-  response: string;
-  aiResponse?: string;
-  evaluation?: any;
-  question?: string;
-}
+import { RoundChallenge, RoundData, ChallengeResponse } from '../models/challenge.model';
 
 export interface FocusData {
   focusArea: string;
   description: string;
-}
-
-export interface RoundData {
-  roundNumber: number;
-  question: string;
-  answer: string;
-  result?: {
-    aiResponse: string;
-    evaluation: any;
-  };
 }
 
 export interface Challenge {
@@ -32,6 +15,8 @@ export interface Challenge {
   focus: FocusData;
   rounds: RoundData[];
   description: string;
+  questions: string[];
+  currentRound: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +26,7 @@ export interface Challenge {
 })
 export class ChallengeService extends BaseService {
   private readonly COLLECTION = 'challenges';
+  private readonly COLLECTION_NAME = 'challenges';
 
   constructor(
     protected override firestore: Firestore,
@@ -49,21 +35,18 @@ export class ChallengeService extends BaseService {
     super(firestore);
   }
 
-  async generateChallenge(roundNumber: number): Promise<Challenge> {
-    // This would typically call an API or use AI to generate a challenge
-    // For now, we'll return a mock challenge
-    return {
+  async generateChallenge(focusArea: string): Promise<RoundChallenge> {
+    const challenge: RoundChallenge = {
       id: '',
-      userId: '',
-      focus: {
-        focusArea: '',
-        description: ''
-      },
-      rounds: [],
-      description: '',
-      createdAt: new Date(),
-      updatedAt: new Date()
+      title: `Challenge for ${focusArea}`,
+      description: `A challenge focused on ${focusArea}`,
+      aiResponse: '',
+      steps: []
     };
+
+    const challengeId = await this.createDocument(this.COLLECTION_NAME, challenge);
+    challenge.id = challengeId;
+    return challenge;
   }
 
   async generateAIResponse(challengeId: string): Promise<string> {
@@ -140,56 +123,71 @@ export class ChallengeService extends BaseService {
       throw new Error('User not found');
     }
 
-    // Generate initial question based on focus area
-    const description = this.generateQuestion(focusData.focusArea);
+    // Generate all questions based on focus area
+    const questions = this.generateAllQuestions(focusData.focusArea);
+    const description = questions[0]; // First question as description
 
     const challengeId = await this.createDocument(this.COLLECTION, {
       userId,
       focus: focusData,
       rounds: [],
       description,
+      questions,
+      currentRound: 1,
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
+    // Store the challenge ID in localStorage
+    localStorage.setItem('mereka_challenge_id', challengeId);
+
     return challengeId;
   }
 
-  private generateQuestion(focusArea: string): string {
+  private generateAllQuestions(focusArea: string): string[] {
+    // Generate 4 different questions based on the focus area
     switch (focusArea) {
       case 'creative':
-        return 'How would you solve a complex problem in a creative way that AI might not think of?';
+        return [
+          'How would you solve a complex problem in a creative way that AI might not think of?',
+          'What unique perspective could you bring to this creative challenge?',
+          'How would you combine different ideas to create something innovative?',
+          'What unexpected approach would you take to solve this problem?'
+        ];
       case 'analytical':
-        return 'Analyze this logical problem and explain your reasoning step by step.';
+        return [
+          'Analyze this logical problem and explain your reasoning step by step.',
+          'What patterns do you observe in this analytical challenge?',
+          'How would you break down this complex problem into manageable parts?',
+          'What data would you need to make a well-informed decision?'
+        ];
       case 'emotional':
-        return 'How would you handle this emotionally challenging situation?';
+        return [
+          'How would you handle this emotionally challenging situation?',
+          'What emotional intelligence skills would you apply in this scenario?',
+          'How would you balance emotional and rational considerations?',
+          'What empathetic approach would you take to resolve this situation?'
+        ];
       case 'ethical':
-        return 'What ethical considerations would you take into account in this scenario?';
+        return [
+          'What ethical considerations would you take into account in this scenario?',
+          'How would you balance competing ethical principles in this situation?',
+          'What potential ethical dilemmas might arise from this decision?',
+          'How would you ensure your solution respects all stakeholders?'
+        ];
       default:
-        return 'Please provide your response to this challenge.';
+        return [
+          'Please provide your response to this challenge.',
+          'How would you approach this problem?',
+          'What insights can you bring to this situation?',
+          'How would you evaluate the success of your solution?'
+        ];
     }
   }
 
   async addRound(challengeId: string, roundData: RoundData): Promise<void> {
-    const challenge = await this.getDocument(this.COLLECTION, challengeId);
-
-    if (!challenge) {
-      throw new Error('Challenge not found');
-    }
-
-    // Ensure roundData has both question and answer
-    const completeRoundData: RoundData = {
-      roundNumber: roundData.roundNumber,
-      question: roundData.question || challenge.description,
-      answer: roundData.answer,
-      result: roundData.result
-    };
-
-    const rounds = [...(challenge.rounds || []), completeRoundData];
-
-    await this.updateDocument(this.COLLECTION, challengeId, {
-      rounds,
-      updatedAt: new Date()
+    await this.updateDocument(this.COLLECTION_NAME, challengeId, {
+      [`rounds.${roundData.roundNumber}`]: roundData
     });
   }
 
@@ -199,5 +197,39 @@ export class ChallengeService extends BaseService {
 
   async getUserChallenges(userId: string): Promise<Challenge[]> {
     return this.queryDocuments(this.COLLECTION, 'userId', userId);
+  }
+
+  async saveResponse(response: ChallengeResponse): Promise<void> {
+    await this.createDocument('responses', response);
+  }
+
+  async getCurrentRound(): Promise<number> {
+    const challengeId = localStorage.getItem('mereka_challenge_id');
+    if (!challengeId) return 1;
+    const challenge = await this.getChallenge(challengeId);
+    return challenge?.currentRound || 1;
+  }
+
+  setCurrentRound(round: number): void {
+    const challengeId = localStorage.getItem('mereka_challenge_id');
+    if (!challengeId) return;
+    this.updateDocument(this.COLLECTION, challengeId, { currentRound: round });
+  }
+
+  async submitResponse(challengeId: string, response: string): Promise<ChallengeResponse> {
+    const aiResponse = await this.generateAIResponse(challengeId);
+    const currentRound = await this.getCurrentRound();
+    const evaluation = await this.evaluateResponse(currentRound, response, challengeId);
+
+    const challengeResponse: ChallengeResponse = {
+      challengeId,
+      response,
+      aiResponse,
+      evaluation,
+      question: (await this.getChallenge(challengeId))?.description || ''
+    };
+
+    await this.saveResponse(challengeResponse);
+    return challengeResponse;
   }
 }

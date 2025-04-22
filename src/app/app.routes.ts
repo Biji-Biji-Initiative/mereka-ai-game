@@ -4,9 +4,7 @@ import { ContextComponent } from './pages/context/context.component';
 import { TraitsComponent } from './pages/traits/traits.component';
 import { AttitudesComponent } from './pages/attitudes/attitudes.component';
 import { FocusComponent } from './pages/focus/focus.component';
-import { Round1Component } from './components/rounds/round1.component';
-import { Round2Component } from './components/rounds/round2.component';
-import { Round3Component } from './components/rounds/round3.component';
+import { DynamicRoundComponent } from './components/rounds/dynamic-round.component';
 import { ResultsComponent } from './pages/results/results.component';
 import { ShareComponent } from './pages/share/share.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
@@ -51,25 +49,12 @@ export const routes: Routes = [
   {
     path: 'focus',
     component: FocusComponent,
-    data: { previous: 'attitudes', next: 'round1' },
+    data: { previous: 'attitudes', next: 'round/1' },
     canActivate: [RouteGuard]
   },
   {
-    path: 'round1',
-    component: Round1Component,
-    data: { previous: 'focus', next: 'round2' },
-    canActivate: [RouteGuard]
-  },
-  {
-    path: 'round2',
-    component: Round2Component,
-    data: { previous: 'round1', next: 'round3' },
-    canActivate: [RouteGuard]
-  },
-  {
-    path: 'round3',
-    component: Round3Component,
-    data: { previous: 'round2', next: 'results' },
+    path: 'round/:round',
+    component: DynamicRoundComponent,
     canActivate: [RouteGuard]
   },
   {

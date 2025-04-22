@@ -21,12 +21,17 @@ export class BaseService {
         return id;
     }
 
-    protected async updateDocument(collectionName: string, id: string, data: any): Promise<void> {
-        const docRef = doc(this.firestore, collectionName, id);
-        await updateDoc(docRef, {
-            ...data,
-            updatedAt: serverTimestamp()
-        });
+    public async updateDocument(collection: string, docId: string, data: any): Promise<void> {
+        try {
+            const docRef = doc(this.firestore, collection, docId);
+            await updateDoc(docRef, {
+                ...data,
+                updatedAt: serverTimestamp()
+            });
+        } catch (error) {
+            console.error('Error updating document:', error);
+            throw error;
+        }
     }
 
     protected async getDocument(collectionName: string, id: string): Promise<any> {

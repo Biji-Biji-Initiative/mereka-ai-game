@@ -66,4 +66,12 @@ export class NavigationService {
       this.loadingService.hide();
     }
   }
+
+  async navigateToNextRound(currentRound: number): Promise<void> {
+    if (currentRound < 3) {
+      await this.navigateToNextRoute(`round/${currentRound}`, `round/${currentRound + 1}`);
+    } else {
+      await this.navigateToNextRoute(`round/${currentRound}`, 'results');
+    }
+  }
 }
