@@ -318,12 +318,70 @@ export class GameService {
   }
 
   getDashboardData(): Promise<DashboardData> {
-    return this.http.get<DashboardData>(`${this.apiUrl}/dashboard`).toPromise()
-      .then(data => {
-        if (!data) {
-          throw new Error('No dashboard data available');
+    // Return dummy data for now
+    const dummyData: DashboardData = {
+      level: 3,
+      overallProgress: 75,
+      challengesCompleted: 12,
+      totalBadges: 5,
+      streakDays: 7,
+      skillLevels: {
+        'critical-thinking': 4,
+        'problem-solving': 3,
+        'communication': 5,
+        'creativity': 4,
+        'analytical': 3,
+        'strategic': 4
+      },
+      recentChallenges: [
+        {
+          title: 'AI vs Human Decision Making',
+          score: 85,
+          focusArea: 'Critical Thinking',
+          date: '2023-05-15'
+        },
+        {
+          title: 'Ethical AI Implementation',
+          score: 92,
+          focusArea: 'Problem Solving',
+          date: '2023-05-10'
+        },
+        {
+          title: 'Future of Work',
+          score: 78,
+          focusArea: 'Strategic',
+          date: '2023-05-05'
         }
-        return data;
-      });
+      ],
+      badges: [
+        {
+          name: 'Critical Thinker',
+          description: 'Achieved high scores in critical thinking challenges',
+          date: '2023-05-01'
+        },
+        {
+          name: 'Problem Solver',
+          description: 'Successfully completed 10 challenges',
+          date: '2023-04-28'
+        },
+        {
+          name: 'Communication Pro',
+          description: 'Demonstrated excellent communication skills',
+          date: '2023-04-25'
+        },
+        {
+          name: 'Creative Mind',
+          description: 'Showed exceptional creativity in solutions',
+          date: '2023-04-20'
+        },
+        {
+          name: 'Strategic Planner',
+          description: 'Achieved high scores in strategic challenges',
+          date: '2023-04-15'
+        }
+      ]
+    };
+
+    return Promise.resolve(dummyData);
   }
 }
