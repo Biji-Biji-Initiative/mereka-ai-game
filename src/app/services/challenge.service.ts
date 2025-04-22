@@ -10,9 +10,26 @@ export interface ChallengeResponse {
   evaluation?: any;
 }
 
+export interface FocusData {
+  focusArea: string;
+  description: string;
+}
+
+export interface RoundData {
+  roundNumber: number;
+  question: string;
+  answer: string;
+  feedback?: string;
+}
+
 export interface Challenge {
   id: string;
+  userId: string;
+  focus: FocusData;
+  rounds: RoundData[];
   description: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 @Injectable({
@@ -32,8 +49,16 @@ export class ChallengeService extends BaseService {
     // This would typically call an API or use AI to generate a challenge
     // For now, we'll return a mock challenge
     return {
-      id: `challenge_${roundNumber}_${Date.now()}`,
-      description: `This is a mock challenge for round ${roundNumber}`
+      id: '',
+      userId: '',
+      focus: {
+        focusArea: '',
+        description: ''
+      },
+      rounds: [],
+      description: '',
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
   }
 
@@ -94,5 +119,47 @@ export class ChallengeService extends BaseService {
       }
     }
     return responses;
+  }
+
+  async createChallenge(focusData: FocusData): Promise<string> {
+    const userId = this.userService.getCurrentUserId();
+
+    if (!userId) {
+      throw new Error('User not found');
+    }
+
+    const challengeId = await this.createDocument(this.COLLECTION, {
+      userId,
+      focus: focusData,
+      rounds: [],
+      description: '',
+      createdAt: new Date(),
+      updatedAt: new Date()
+    });
+
+    return challengeId;
+  }
+
+  async addRound(challengeId: string, roundData: RoundData): Promise<void> {
+    const challenge = await this.getDocument(this.COLLECTION, challengeId);
+
+    if (!challenge) {
+      throw new Error('Challenge not found');
+    }
+
+    const rounds = [...(challenge.rounds || []), roundData];
+
+    await this.updateDocument(this.COLLECTION, challengeId, {
+      rounds,
+      updatedAt: new Date()
+    });
+  }
+
+  async getChallenge(challengeId: string): Promise<Challenge | null> {
+    return this.getDocument(this.COLLECTION, challengeId);
+  }
+
+  async getUserChallenges(userId: string): Promise<Challenge[]> {
+    return this.queryDocuments(this.COLLECTION, 'userId', userId);
   }
 }

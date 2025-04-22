@@ -2,6 +2,9 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FocusArea } from '../../models/focus.interface';
+import { ChallengeService, FocusData } from '../../services/challenge.service';
+import { NavigationService } from '../../services/navigation.service';
+import { LoadingService } from '../../services/loading.service';
 
 @Component({
   selector: 'app-focus',
@@ -49,23 +52,45 @@ export class FocusComponent {
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private challengeService: ChallengeService,
+    private navigationService: NavigationService,
+    private loadingService: LoadingService
   ) { }
 
   selectFocusArea(focusArea: FocusArea) {
     this.selectedFocusArea = focusArea;
   }
 
-  onContinue() {
+  async onContinue() {
     if (this.selectedFocusArea) {
-      // Save focus area selection here if needed
-      const nextRoute = this.route.snapshot.data['next'];
-      this.router.navigate(['/' + nextRoute]);
+      this.loadingService.show();
+      try {
+        // Create focus data
+        const focusData: FocusData = {
+          focusArea: this.selectedFocusArea.id,
+          description: this.selectedFocusArea.description
+        };
+
+        // Create challenge with focus data
+        const challengeId = await this.challengeService.createChallenge(focusData);
+
+        // Store challenge ID in localStorage for later use
+        localStorage.setItem('mereka_challenge_id', challengeId);
+
+        // Navigate to next route
+        const nextRoute = this.route.snapshot.data['next'];
+        await this.navigationService.navigateToNextRoute('focus', nextRoute);
+      } catch (error) {
+        console.error('Error creating challenge:', error);
+      } finally {
+        this.loadingService.hide();
+      }
     }
   }
 
   onBack() {
     const previousRoute = this.route.snapshot.data['previous'];
-    this.router.navigate(['/' + previousRoute]);
+    this.navigationService.navigateToPreviousRoute('focus', previousRoute);
   }
 }
