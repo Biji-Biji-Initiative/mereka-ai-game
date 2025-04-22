@@ -1,6 +1,4 @@
 import { Routes } from '@angular/router';
-import { SignInComponent } from './pages/auth/sign-in/sign-in.component';
-import { SignUpComponent } from './pages/auth/sign-up/sign-up.component';
 import { WelcomeComponent } from './pages/welcome/welcome.component';
 import { ContextComponent } from './pages/context/context.component';
 import { TraitsComponent } from './pages/traits/traits.component';
@@ -12,11 +10,24 @@ import { Round3Component } from './components/rounds/round3.component';
 import { ResultsComponent } from './pages/results/results.component';
 import { ShareComponent } from './pages/share/share.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
+import { LoginComponent } from './pages/auth/login/login.component';
+import { RegisterComponent } from './pages/auth/register/register.component';
+import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-password.component';
+import { ProfileComponent } from './pages/profile/profile.component';
+import { SettingsComponent } from './pages/settings/settings.component';
+import { HelpComponent } from './pages/help/help.component';
+import { TournamentsComponent } from './pages/tournaments/tournaments.component';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
-  { path: 'signin', component: SignInComponent },
-  { path: 'signup', component: SignUpComponent },
+  {
+    path: 'auth',
+    children: [
+      { path: 'login', component: LoginComponent },
+      { path: 'register', component: RegisterComponent },
+      { path: 'forgot-password', component: ForgotPasswordComponent }
+    ]
+  },
   {
     path: 'context',
     component: ContextComponent,
@@ -64,5 +75,21 @@ export const routes: Routes = [
   {
     path: 'share',
     component: ShareComponent
+  },
+  {
+    path: 'profile',
+    component: ProfileComponent
+  },
+  {
+    path: 'settings',
+    component: SettingsComponent
+  },
+  {
+    path: 'help',
+    component: HelpComponent
+  },
+  {
+    path: 'tournaments',
+    component: TournamentsComponent
   }
 ];
