@@ -8,6 +8,7 @@ export interface ChallengeResponse {
   response: string;
   aiResponse?: string;
   evaluation?: any;
+  question?: string;
 }
 
 export interface FocusData {
@@ -19,7 +20,10 @@ export interface RoundData {
   roundNumber: number;
   question: string;
   answer: string;
-  feedback?: string;
+  result?: {
+    aiResponse: string;
+    evaluation: any;
+  };
 }
 
 export interface Challenge {
@@ -93,11 +97,19 @@ export class ChallengeService extends BaseService {
   }
 
   async saveRoundResponse(userId: string, roundNumber: number, data: ChallengeResponse): Promise<void> {
-    await this.createDocument(this.COLLECTION, {
+    // Save the complete response data including question, answer, AI response, and evaluation
+    const responseData = {
       userId,
       roundNumber,
-      ...data
-    });
+      challengeId: data.challengeId,
+      question: data.question || '',
+      response: data.response,
+      aiResponse: data.aiResponse || '',
+      evaluation: data.evaluation || null,
+      timestamp: new Date()
+    };
+
+    await this.createDocument(this.COLLECTION, responseData);
 
     // Update user's current route
     const nextRoute = roundNumber < 3 ? `/round${roundNumber + 1}` : '/results';
@@ -128,16 +140,34 @@ export class ChallengeService extends BaseService {
       throw new Error('User not found');
     }
 
+    // Generate initial question based on focus area
+    const description = this.generateQuestion(focusData.focusArea);
+
     const challengeId = await this.createDocument(this.COLLECTION, {
       userId,
       focus: focusData,
       rounds: [],
-      description: '',
+      description,
       createdAt: new Date(),
       updatedAt: new Date()
     });
 
     return challengeId;
+  }
+
+  private generateQuestion(focusArea: string): string {
+    switch (focusArea) {
+      case 'creative':
+        return 'How would you solve a complex problem in a creative way that AI might not think of?';
+      case 'analytical':
+        return 'Analyze this logical problem and explain your reasoning step by step.';
+      case 'emotional':
+        return 'How would you handle this emotionally challenging situation?';
+      case 'ethical':
+        return 'What ethical considerations would you take into account in this scenario?';
+      default:
+        return 'Please provide your response to this challenge.';
+    }
   }
 
   async addRound(challengeId: string, roundData: RoundData): Promise<void> {
@@ -147,7 +177,15 @@ export class ChallengeService extends BaseService {
       throw new Error('Challenge not found');
     }
 
-    const rounds = [...(challenge.rounds || []), roundData];
+    // Ensure roundData has both question and answer
+    const completeRoundData: RoundData = {
+      roundNumber: roundData.roundNumber,
+      question: roundData.question || challenge.description,
+      answer: roundData.answer,
+      result: roundData.result
+    };
+
+    const rounds = [...(challenge.rounds || []), completeRoundData];
 
     await this.updateDocument(this.COLLECTION, challengeId, {
       rounds,

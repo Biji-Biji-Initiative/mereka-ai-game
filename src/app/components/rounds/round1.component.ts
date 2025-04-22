@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { BaseRoundComponent, RoundChallenge } from './base-round.component';
-import { ChallengeService, RoundData } from '../../services/challenge.service';
+import { ChallengeService, RoundData, ChallengeResponse } from '../../services/challenge.service';
 import { UserService } from '../../services/user.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -28,27 +28,29 @@ export class Round1Component extends BaseRoundComponent {
   }
 
   protected override async loadChallenge(): Promise<void> {
-    this.loadingService.show();
     try {
+      this.loadingService.show();
       // Get challenge ID from localStorage
       const challengeId = localStorage.getItem('mereka_challenge_id');
 
       if (!challengeId) {
-        throw new Error('No challenge ID found');
+        this.router.navigate(['/focus']);
+        return;
       }
 
       // Get challenge data
       const challenge = await this.challengeService.getChallenge(challengeId);
 
       if (!challenge) {
-        throw new Error('Challenge not found');
+        this.router.navigate(['/focus']);
+        return;
       }
 
-      // Set up round 1 challenge based on focus area
+      // Set up round 1 challenge
       this.challenge = {
         id: challengeId,
         title: 'Round 1: Initial Challenge',
-        description: this.generateQuestion(challenge.focus.focusArea),
+        description: challenge.description || 'How would you solve this problem?',
         steps: [
           'Read the question carefully',
           'Think about your unique human perspective',
@@ -65,64 +67,68 @@ export class Round1Component extends BaseRoundComponent {
     }
   }
 
-  private generateQuestion(focusArea: string): string {
-    // Generate question based on focus area
-    switch (focusArea) {
-      case 'creative':
-        return 'How would you solve a complex problem in a creative way that AI might not think of?';
-      case 'analytical':
-        return 'Analyze this logical problem and explain your reasoning step by step.';
-      case 'emotional':
-        return 'How would you handle this emotionally challenging situation?';
-      case 'ethical':
-        return 'What ethical considerations would you take into account in this scenario?';
-      default:
-        return 'Please provide your response to this challenge.';
-    }
-  }
-
   protected override async submitResponse(): Promise<void> {
     if (!this.challenge?.id || !this.userResponse) return;
 
     try {
-      // Create round data
+      this.loadingService.show();
+      this.showAiThinking = true;
+      const userId = this.userService.getCurrentUserId();
+      if (!userId) {
+        this.router.navigate(['/context']);
+        return;
+      }
+
+      // First, generate AI response
+      const aiResponse = await this.challengeService.generateAIResponse(this.challenge.id);
+
+      // Then, evaluate the response
+      const evaluation = await this.challengeService.evaluateResponse(1, this.userResponse, this.challenge.id);
+
+      // Create round data with the new structure
       const roundData: RoundData = {
         roundNumber: 1,
-        question: this.challenge.description,
-        answer: this.userResponse
+        question: this.challenge.description || 'How would you solve this problem?',
+        answer: this.userResponse,
+        result: {
+          aiResponse: aiResponse || '',
+          evaluation: evaluation || null
+        }
       };
 
-      // Add round data to challenge
+      // Save the round data to the challenge
       await this.challengeService.addRound(this.challenge.id, roundData);
+
+      // Save the complete response with AI analysis and evaluation
+      const challengeResponse: ChallengeResponse = {
+        challengeId: this.challenge.id,
+        response: this.userResponse,
+        aiResponse: aiResponse || '',
+        evaluation: evaluation || null,
+        question: this.challenge.description || 'How would you solve this problem?'
+      };
+
+      // Save the response to the database
+      await this.challengeService.saveRoundResponse(userId, 1, challengeResponse);
+
+      // Set the evaluation to show in the UI
+      this.evaluation = evaluation;
+
+      // Hide AI thinking and show evaluation
+      this.showAiThinking = false;
+      this.showEvaluation = true;
+
     } catch (error) {
       console.error('Error submitting round:', error);
+      this.showAiThinking = false;
+      // Error will be shown in the UI through the loading state
+    } finally {
+      this.loadingService.hide();
     }
   }
 
   protected override async evaluateResponse(): Promise<void> {
-    // For now, we'll just proceed to the next round
-    // You can implement AI evaluation logic here later
-    this.evaluation = {
-      metrics: {
-        creativity: 85,
-        practicality: 80,
-        depth: 75,
-        humanEdge: 90,
-        overall: 82.5
-      },
-      feedback: ['Great response!'],
-      strengths: ['Unique perspective', 'Clear reasoning'],
-      improvements: ['Could provide more examples'],
-      comparison: {
-        userScore: 82.5,
-        rivalScore: 78,
-        advantage: 'user',
-        advantageReason: 'More creative approach'
-      }
-    };
-  }
-
-  protected override getNextRoute(): string {
-    return '/round2';
+    // This method is now handled within submitResponse
+    // We don't need to evaluate separately anymore
   }
 }
