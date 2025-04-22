@@ -1,8 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { GameService } from '../../services/game.service';
-import { ResultsData } from '../../services/results.service';
+import { GameService, ResultsData } from '../../services/game.service';
 
 type RoundKey = 'round1' | 'round2' | 'round3';
 

@@ -1,9 +1,39 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
-import { ResultsData } from './results.service';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
 
+export interface RoundResult {
+  score: number;
+  strengths: string[];
+  areas: string[];
+  comparison: {
+    humanScore: number;
+    aiScore: number;
+    difference: number;
+  };
+}
+
+export interface ResultsData {
+  overallScore: number;
+  focusArea: {
+    name: string;
+    description: string;
+  };
+  rounds: {
+    round1: RoundResult;
+    round2: RoundResult;
+    round3: RoundResult;
+  };
+  badges: {
+    id: string;
+    name: string;
+    description: string;
+    icon: string;
+  }[];
+  insights: string[];
+  recommendations: string[];
+}
 interface RoundData {
   response?: string;
   evaluation?: RoundEvaluation;
