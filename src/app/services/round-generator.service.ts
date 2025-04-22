@@ -98,7 +98,7 @@ export interface GeneratedChallenge {
 })
 export class RoundGeneratorService {
   // Cloud Function URL
-  private readonly CLOUD_FUNCTION_URL = 'http://127.0.0.1:5001/mereka-ai-game/us-central1/processRequest';
+  private readonly CLOUD_FUNCTION_URL = `${environment.apiUrl}/processRequest`;
 
   constructor(
     private http: HttpClient,

@@ -4,6 +4,7 @@ import { BaseService } from './base.service';
 import { UserService } from './user.service';
 import { RoundChallenge, RoundData, ChallengeResponse } from '../models/challenge.model';
 import { RoundGeneratorService, GeneratedRound, GeneratedChallenge } from './round-generator.service';
+import { RoundEvaluationService, EvaluationResponse } from './round-evaluation.service';
 
 export interface FocusData {
   focusArea: string;
@@ -33,7 +34,8 @@ export class ChallengeService extends BaseService {
   constructor(
     protected override firestore: Firestore,
     private userService: UserService,
-    private roundGeneratorService: RoundGeneratorService
+    private roundGeneratorService: RoundGeneratorService,
+    private roundEvaluationService: RoundEvaluationService
   ) {
     super(firestore);
   }
@@ -58,28 +60,63 @@ export class ChallengeService extends BaseService {
     return `This is a mock AI response for challenge ${challengeId}`;
   }
 
-  async evaluateResponse(roundNumber: number, userResponse: string, challengeId: string): Promise<any> {
-    // This would typically call an API or use AI to evaluate the response
-    // For now, we'll return a mock evaluation
-    return {
-      metrics: {
-        creativity: Math.random() * 5,
-        practicality: Math.random() * 5,
-        depth: Math.random() * 5,
-        humanEdge: Math.random() * 5,
-        overall: Math.random() * 5
-      },
-      feedback: ['Good job!', 'Keep it up!'],
-      strengths: ['Creative thinking', 'Clear communication'],
-      improvements: ['More detail', 'Better structure'],
-      comparison: {
-        userScore: Math.random() * 5,
-        rivalScore: Math.random() * 5,
-        advantage: Math.random() > 0.5 ? 'user' : 'rival',
-        advantageReason: 'Better reasoning'
-      },
-      badges: ['Creative Thinker', 'Problem Solver']
-    };
+  async evaluateResponse(roundNumber: number, userResponse: string, challengeId: string): Promise<EvaluationResponse> {
+    try {
+      // Get the current user ID
+      const userId = this.userService.getCurrentUserId();
+      if (!userId) {
+        throw new Error('No user ID found');
+      }
+
+      // Get the challenge to access the question
+      const challenge = await this.getChallenge(challengeId);
+      if (!challenge) {
+        throw new Error('Challenge not found');
+      }
+
+      // Get the question for this round
+      const question = challenge.questions[roundNumber - 1];
+      if (!question) {
+        throw new Error('No question found for this round');
+      }
+
+      // Generate AI response
+      const aiResponse = await this.generateAIResponse(challengeId);
+
+      // Use the RoundEvaluationService to evaluate the response
+      const evaluation = await this.roundEvaluationService.evaluateResponse({
+        userId,
+        challengeId,
+        roundNumber,
+        question,
+        userResponse,
+        aiResponse
+      });
+
+      return evaluation;
+    } catch (error) {
+      console.error('Error evaluating response:', error);
+      // Return a default evaluation in case of error
+      return {
+        metrics: {
+          creativity: Math.random() * 100,
+          practicality: Math.random() * 100,
+          depth: Math.random() * 100,
+          humanEdge: Math.random() * 100,
+          overall: Math.random() * 100
+        },
+        feedback: ['An error occurred during evaluation.'],
+        strengths: ['Response submitted successfully.'],
+        improvements: ['Try again with a more detailed response.'],
+        comparison: {
+          userScore: Math.random() * 100,
+          rivalScore: Math.random() * 100,
+          advantage: 'tie',
+          advantageReason: 'Evaluation could not be completed.'
+        },
+        badges: ['Participant']
+      };
+    }
   }
 
   async saveRoundResponse(userId: string, roundNumber: number, data: ChallengeResponse): Promise<void> {
@@ -251,7 +288,7 @@ export class ChallengeService extends BaseService {
     // Generate AI response
     const aiResponse = await this.generateAIResponse(challengeId);
 
-    // Evaluate the response
+    // Evaluate the response using the RoundEvaluationService
     const evaluation = await this.evaluateResponse(currentRound, response, challengeId);
 
     // Create round data
