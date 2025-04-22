@@ -61,8 +61,6 @@ export class RouteGuard implements CanActivate {
       // If user is on results page and trying to navigate to a non-round page
       if (user?.currentRoute === '/results' && !targetPath.includes('/round/')) {
         console.log('RouteGuard - Resetting from results page');
-        // Clear the current challenge ID from localStorage
-        localStorage.removeItem('currentChallengeId');
         // Update user's current route in the database
         await this.userService.updateUserRoute(userId, '');
         // Allow navigation to proceed

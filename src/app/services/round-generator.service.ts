@@ -187,7 +187,7 @@ export class RoundGeneratorService {
          - Traits Summary: ${traitsSummary}
       5. The challenges should be appropriate for the user's level based on their traits and attitudes.
       6. Your response MUST be an array of strings, where each string is a question for a challenge.
-      7. Generate 4-5 questions that progressively increase in difficulty.
+      7. Generate 2 questions that progressively increase in difficulty.
       8. Each question should be clear, concise, and focused on the specified focus type.
       9. The questions should be open-ended and encourage thoughtful responses.
 
