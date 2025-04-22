@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService, UserContext } from '../../services/user.service';
+import { NavigationService } from '../../services/navigation.service';
 
 @Component({
   selector: 'app-context',
@@ -24,7 +25,8 @@ export class ContextComponent {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private userService: UserService
+    private userService: UserService,
+    private navigationService: NavigationService
   ) { }
 
   async onSubmit() {
@@ -33,11 +35,11 @@ export class ContextComponent {
     this.isSubmitting = true;
     try {
       // Create user and save context data
-      await this.userService.createUser(this.userContext);
+      const userId = await this.userService.createUser(this.userContext);
 
-      // Navigate to next route
+      // Navigate to next route using the navigation service
       const nextRoute = this.route.snapshot.data['next'];
-      this.router.navigate(['/' + nextRoute]);
+      await this.navigationService.navigateToNextRoute('context', nextRoute);
     } catch (error) {
       console.error('Error saving context:', error);
       // Handle error appropriately
