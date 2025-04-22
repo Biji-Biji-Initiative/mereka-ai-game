@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { ChallengeService } from '../../services/challenge.service';
 import { RoundData, ChallengeResponse } from '../../models/challenge.model';
+import { NavigationService } from '../../services/navigation.service';
 
 @Component({
   selector: 'app-dynamic-round',
@@ -20,6 +21,9 @@ export class DynamicRoundComponent implements OnInit {
   evaluation: ChallengeResponse | null = null;
   showAiThinking: boolean = false;
   previousResponses: { [key: number]: string; } = {};
+  currentRoundNumber: number = 1;
+  isLoading: boolean = true;
+  maxRounds: number = 4; // Default value, will be updated from challenge data
 
   // Define metrics for the template
   metrics = ['creativity', 'practicality', 'depth', 'humanEdge', 'overall'];
@@ -27,51 +31,88 @@ export class DynamicRoundComponent implements OnInit {
   constructor(
     private challengeService: ChallengeService,
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private navigationService: NavigationService
   ) { }
 
-  async ngOnInit() {
-    // Get the round number from the route parameter
+  ngOnInit() {
+    console.log('DynamicRoundComponent initialized');
     this.route.params.subscribe(params => {
-      this.roundNumber = parseInt(params['round'], 10);
-      this.loadCurrentRound();
+      console.log('Route params:', params);
+      const roundNumber = parseInt(params['round'], 10);
+      console.log('Parsed round number:', roundNumber);
+      if (roundNumber) {
+        this.currentRoundNumber = roundNumber;
+        this.loadCurrentRound();
+      } else {
+        console.error('No round number found in route params');
+        this.router.navigate(['/focus']);
+      }
     });
+
+    // Log the current route
+    console.log('Current route:', this.route.snapshot.url);
+    console.log('Route config:', this.route.snapshot.routeConfig);
   }
 
-  private async loadCurrentRound() {
+  async loadCurrentRound() {
+    const challengeId = localStorage.getItem('currentChallengeId');
+    if (!challengeId) {
+      console.error('No challenge ID found');
+      this.router.navigate(['/focus']);
+      return;
+    }
+
+    this.isLoading = true;
+
+    // Reset evaluation and user response when loading a new round
+    this.evaluation = null;
+    this.userResponse = '';
+    this.showAiThinking = false;
+
     try {
-      const challengeId = localStorage.getItem('currentChallengeId');
-      if (!challengeId) {
+      const challenge = await this.challengeService.getChallenge(challengeId);
+      if (!challenge) {
+        console.error('Challenge not found');
         this.router.navigate(['/focus']);
         return;
       }
 
-      const challenge = await this.challengeService.getChallenge(challengeId);
-      if (challenge) {
-        // Set the current round based on the route parameter
-        this.currentRound = challenge.rounds[this.roundNumber - 1];
+      // Set the maximum number of rounds from the number of questions in the challenge
+      this.maxRounds = challenge.questions.length;
 
-        // If this round doesn't exist yet, create it
-        if (!this.currentRound) {
-          this.currentRound = {
-            roundNumber: this.roundNumber,
-            question: challenge.questions[this.roundNumber - 1] || 'No question available',
-            answer: ''
-          };
-        }
-
-        // Load previous responses
-        this.loadPreviousResponses(challenge);
+      // Initialize rounds array if it doesn't exist
+      if (!challenge.rounds || !Array.isArray(challenge.rounds)) {
+        challenge.rounds = [];
       }
+
+      // Get or create the round
+      let round = challenge.rounds.find(r => r.roundNumber === this.currentRoundNumber);
+      if (!round) {
+        round = {
+          roundNumber: this.currentRoundNumber,
+          question: challenge.questions[this.currentRoundNumber - 1] || 'No question available',
+          answer: ''
+        };
+        await this.challengeService.addRound(challengeId, round);
+      }
+
+      this.currentRound = round;
+
+      // Load previous responses
+      this.loadPreviousResponses(challenge);
     } catch (error) {
       console.error('Error loading round:', error);
+      this.router.navigate(['/focus']);
+    } finally {
+      this.isLoading = false;
     }
   }
 
   private loadPreviousResponses(challenge: any) {
     this.previousResponses = {};
     challenge.rounds.forEach((round: RoundData) => {
-      if (round.roundNumber < this.roundNumber && round.answer) {
+      if (round.roundNumber < this.currentRoundNumber && round.answer) {
         this.previousResponses[round.roundNumber] = round.answer;
       }
     });
@@ -91,12 +132,8 @@ export class DynamicRoundComponent implements OnInit {
       // Submit response and get evaluation
       this.evaluation = await this.challengeService.submitResponse(challengeId, this.userResponse);
 
-      // Move to next round or complete the challenge
-      if (this.roundNumber < 4) {
-        this.router.navigate(['/round', this.roundNumber + 1]);
-      } else {
-        this.router.navigate(['/complete']);
-      }
+      // Don't navigate immediately - let the user see the evaluation first
+      // The user will click the continue button to move to the next round
     } catch (error) {
       console.error('Error submitting response:', error);
     } finally {
@@ -106,10 +143,13 @@ export class DynamicRoundComponent implements OnInit {
   }
 
   handleContinue() {
-    if (this.roundNumber < 4) {
-      this.router.navigate(['/round', this.roundNumber + 1]);
+    console.log(`Current round: ${this.currentRoundNumber}, Max rounds: ${this.maxRounds}`);
+    if (this.currentRoundNumber < this.maxRounds) {
+      console.log('Navigating to next round');
+      this.navigationService.navigateToNextRound(this.currentRoundNumber, this.maxRounds);
     } else {
-      this.router.navigate(['/complete']);
+      console.log('Navigating to results page');
+      this.navigationService.navigateToNextRoute(`round/${this.currentRoundNumber}`, 'results');
     }
   }
 

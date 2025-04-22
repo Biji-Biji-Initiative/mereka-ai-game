@@ -16,11 +16,13 @@ export class NavigationService {
   async navigateToNextRoute(currentRoute: string, nextRoute: string): Promise<void> {
     // Show loading indicator
     this.loadingService.show();
+    console.log(`Navigating from ${currentRoute} to ${nextRoute}`);
 
     const userId = this.userService.getCurrentUserId();
 
     if (!userId) {
       // If no user ID, redirect to context page
+      console.error('No user ID found, redirecting to context');
       this.router.navigate(['/context']);
       this.loadingService.hide();
       return;
@@ -28,10 +30,13 @@ export class NavigationService {
 
     try {
       // Update the user's current route in the database
-      await this.userService.updateUserRoute(userId, `/${nextRoute}`);
+      const routeWithSlash = nextRoute.startsWith('/') ? nextRoute : `/${nextRoute}`;
+      console.log(`Updating user route to: ${routeWithSlash}`);
+      await this.userService.updateUserRoute(userId, routeWithSlash);
 
       // Navigate to the next route
-      this.router.navigate([`/${nextRoute}`]);
+      console.log(`Navigating to: ${routeWithSlash}`);
+      this.router.navigate([routeWithSlash]);
     } catch (error) {
       console.error('Error navigating to next route:', error);
     } finally {
@@ -67,10 +72,14 @@ export class NavigationService {
     }
   }
 
-  async navigateToNextRound(currentRound: number): Promise<void> {
-    if (currentRound < 4) {
-      await this.navigateToNextRoute(`round/${currentRound}`, `round/${currentRound + 1}`);
+  async navigateToNextRound(currentRound: number, maxRounds: number): Promise<void> {
+    console.log(`Navigating to next round: current=${currentRound}, max=${maxRounds}`);
+    if (currentRound < maxRounds) {
+      const nextRoute = `round/${currentRound + 1}`;
+      console.log(`Next route: ${nextRoute}`);
+      await this.navigateToNextRoute(`round/${currentRound}`, nextRoute);
     } else {
+      console.log('Navigating to results');
       await this.navigateToNextRoute(`round/${currentRound}`, 'results');
     }
   }

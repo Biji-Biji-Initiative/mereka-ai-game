@@ -63,28 +63,31 @@ export class FocusComponent {
   }
 
   async onContinue() {
-    if (this.selectedFocusArea) {
-      this.loadingService.show();
-      try {
-        // Create focus data
-        const focusData: FocusData = {
-          focusArea: this.selectedFocusArea.id,
-          description: this.selectedFocusArea.description
-        };
+    if (!this.selectedFocusArea) {
+      return;
+    }
 
-        // Create challenge with focus data
-        const challengeId = await this.challengeService.createChallenge(focusData);
+    this.loadingService.show();
+    console.log('Creating challenge for focus area:', this.selectedFocusArea.id);
 
-        // Store challenge ID in localStorage for later use
-        localStorage.setItem('currentChallengeId', challengeId);
+    const focusData: FocusData = {
+      focusArea: this.selectedFocusArea.id,
+      description: this.selectedFocusArea.description
+    };
 
-        // Navigate to first round using the correct route format
-        this.router.navigate(['/round', 1]);
-      } catch (error) {
-        console.error('Error creating challenge:', error);
-      } finally {
-        this.loadingService.hide();
-      }
+    try {
+      const challengeId = await this.challengeService.createChallenge(focusData);
+      console.log('Challenge created with ID:', challengeId);
+      localStorage.setItem('currentChallengeId', challengeId);
+
+      // Navigate to the first round
+      console.log('Navigating to round 1');
+      this.router.navigate(['/round', 1]);
+    } catch (error) {
+      console.error('Error creating challenge:', error);
+      // Handle error appropriately
+    } finally {
+      this.loadingService.hide();
     }
   }
 

@@ -55,7 +55,8 @@ export const routes: Routes = [
   {
     path: 'round/:round',
     component: DynamicRoundComponent,
-    canActivate: [RouteGuard]
+    canActivate: [RouteGuard],
+    data: { title: 'Round' }
   },
   {
     path: 'results',

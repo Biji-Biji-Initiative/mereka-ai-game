@@ -27,6 +27,7 @@ export interface Challenge {
 export class ChallengeService extends BaseService {
   private readonly COLLECTION = 'challenges';
   private readonly COLLECTION_NAME = 'challenges';
+  private readonly DEFAULT_ROUNDS = 4; // Default number of rounds
 
   constructor(
     protected override firestore: Firestore,
@@ -80,6 +81,8 @@ export class ChallengeService extends BaseService {
   }
 
   async saveRoundResponse(userId: string, roundNumber: number, data: ChallengeResponse): Promise<void> {
+    console.log(`Saving response for user ${userId}, round ${roundNumber}`);
+
     // Save the complete response data including question, answer, AI response, and evaluation
     const responseData = {
       userId,
@@ -93,9 +96,16 @@ export class ChallengeService extends BaseService {
     };
 
     await this.createDocument(this.COLLECTION, responseData);
+    console.log('Response saved successfully');
+
+    // Get the challenge to determine the maximum number of rounds
+    const challenge = await this.getChallenge(data.challengeId);
+    const maxRounds = challenge?.questions.length || 4;
+    console.log(`Max rounds: ${maxRounds}`);
 
     // Update user's current route
-    const nextRoute = roundNumber < 3 ? `/round${roundNumber + 1}` : '/results';
+    const nextRoute = roundNumber < maxRounds ? `/round/${roundNumber + 1}` : '/results';
+    console.log(`Updating user route to: ${nextRoute}`);
     await this.userService.updateUserRoute(userId, nextRoute);
   }
 
@@ -104,10 +114,22 @@ export class ChallengeService extends BaseService {
   }
 
   async getAllRoundResponses(userId: string): Promise<ChallengeResponse[]> {
-    // This would need to be implemented with a query to get all rounds for a user
-    // For now, we'll just get them one by one
+    // Get the current challenge to determine the number of rounds
+    const challengeId = localStorage.getItem('currentChallengeId');
+    if (!challengeId) {
+      return [];
+    }
+
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge) {
+      return [];
+    }
+
+    const maxRounds = challenge.questions.length;
+
+    // Get all round responses
     const responses: ChallengeResponse[] = [];
-    for (let i = 1;i <= 3;i++) {
+    for (let i = 1;i <= maxRounds;i++) {
       const response = await this.getRoundResponse(userId, i);
       if (response) {
         responses.push(response);
@@ -122,15 +144,29 @@ export class ChallengeService extends BaseService {
       throw new Error('User not found');
     }
 
+    console.log('Creating challenge for user:', userId);
+
     // Generate questions based on focus area
     const questions = this.generateAllQuestions(focusData.focusArea);
+    const maxRounds = questions.length;
+    console.log(`Generated ${maxRounds} questions for focus area: ${focusData.focusArea}`);
+
+    // Initialize rounds array with the correct number of rounds
+    const rounds: RoundData[] = [];
+    for (let i = 1;i <= maxRounds;i++) {
+      rounds.push({
+        roundNumber: i,
+        question: questions[i - 1] || 'No question available',
+        answer: ''
+      });
+    }
 
     // Create initial challenge data
     const challenge: Challenge = {
       id: '',
       userId,
       focus: focusData,
-      rounds: [],
+      rounds: rounds,
       description: focusData.description,
       questions,
       currentRound: 1,
@@ -138,17 +174,25 @@ export class ChallengeService extends BaseService {
       updatedAt: new Date()
     };
 
-    // Create the challenge document
-    const challengeId = await this.createDocument(this.COLLECTION, challenge);
+    try {
+      // Create the challenge document
+      const challengeId = await this.createDocument(this.COLLECTION, challenge);
+      console.log('Challenge document created with ID:', challengeId);
 
-    // Update the challenge with its ID
-    await this.updateDocument(this.COLLECTION, challengeId, { id: challengeId });
+      // Update the challenge with its ID
+      await this.updateDocument(this.COLLECTION, challengeId, { id: challengeId });
 
-    // Save the current challenge ID to the user's document
-    await this.userService.updateUserRoute(userId, '/round1');
-    await this.updateDocument('users', userId, { currentChallengeId: challengeId });
+      // Save the current challenge ID to the user's document
+      const route = '/round/1';
+      console.log(`Updating user route to: ${route}`);
+      await this.userService.updateUserRoute(userId, route);
+      await this.updateDocument('users', userId, { currentChallengeId: challengeId });
 
-    return challengeId;
+      return challengeId;
+    } catch (error) {
+      console.error('Error creating challenge:', error);
+      throw error;
+    }
   }
 
   private generateAllQuestions(focusArea: string): string[] {
@@ -231,6 +275,13 @@ export class ChallengeService extends BaseService {
 
     // Get the current round number from the challenge
     const currentRound = challenge.currentRound;
+    console.log('Current round:', currentRound);
+
+    // Validate that we have a question for this round
+    if (!challenge.questions || !challenge.questions[currentRound - 1]) {
+      console.error('No question found for round:', currentRound);
+      throw new Error('No question found for this round');
+    }
 
     // Generate AI response
     const aiResponse = await this.generateAIResponse(challengeId);
@@ -247,8 +298,23 @@ export class ChallengeService extends BaseService {
       evaluation
     };
 
-    // Add the round data to the challenge
-    await this.addRound(challengeId, roundData);
+    // Get existing rounds or initialize empty array
+    const rounds = challenge.rounds || [];
+
+    // Update or add the round data
+    const roundIndex = rounds.findIndex(r => r.roundNumber === currentRound);
+    if (roundIndex >= 0) {
+      rounds[roundIndex] = roundData;
+    } else {
+      rounds.push(roundData);
+    }
+
+    // Update the entire challenge document
+    await this.updateDocument(this.COLLECTION, challengeId, {
+      rounds: rounds,
+      currentRound: currentRound + 1,
+      updatedAt: new Date()
+    });
 
     // Create the challenge response
     const challengeResponse: ChallengeResponse = {
@@ -262,11 +328,13 @@ export class ChallengeService extends BaseService {
     // Save the response
     await this.saveResponse(challengeResponse);
 
-    // Update the current round in the challenge
-    await this.updateDocument(this.COLLECTION, challengeId, {
-      currentRound: currentRound + 1,
-      updatedAt: new Date()
-    });
+    // Update user's route if needed
+    const userId = this.userService.getCurrentUserId();
+    if (userId) {
+      const maxRounds = challenge.questions.length;
+      const nextRoute = currentRound < maxRounds ? `/round/${currentRound + 1}` : '/results';
+      await this.userService.updateUserRoute(userId, nextRoute);
+    }
 
     return challengeResponse;
   }

@@ -6,7 +6,7 @@
           <!-- Challenge Card -->
           <div *ngIf="!evaluation" class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
             <div *ngIf="currentRound" class="mb-8">
-              <h2 class="text-2xl font-bold mb-4">Round {{roundNumber}}</h2>
+              <h2 class="text-2xl font-bold mb-4">Round {{currentRoundNumber}}</h2>
               <div class="mb-4">
                 <p class="font-semibold">Question:</p>
                 <p class="mt-2">{{currentRound.question}}</p>
@@ -29,7 +29,7 @@
 
           <!-- Evaluation View -->
           <div *ngIf="evaluation" class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-            <h2 class="text-2xl font-bold mb-4">Round {{roundNumber}} Evaluation</h2>
+            <h2 class="text-2xl font-bold mb-4">Round {{currentRoundNumber}} Evaluation</h2>
 
             <!-- Performance Metrics -->
             <div class="space-y-4">
@@ -113,7 +113,7 @@
             <div class="flex justify-end mt-6">
               <button (click)="handleContinue()"
                 class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{roundNumber === 4 ? 'View Results' : 'Continue to Round ' + (roundNumber + 1)}}
+                {{currentRoundNumber === maxRounds ? 'View Results' : 'Continue to Round ' + (currentRoundNumber + 1)}}
               </button>
             </div>
           </div>
