@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -13,7 +13,7 @@ import { NavigationService } from '../../services/navigation.service';
   templateUrl: './dynamic-round.component.html',
   styleUrls: ['./dynamic-round.component.scss']
 })
-export class DynamicRoundComponent implements OnInit {
+export class DynamicRoundComponent implements OnInit, OnDestroy {
   currentRound: RoundData | null = null;
   userResponse: string = '';
   isSubmitting: boolean = false;
@@ -24,6 +24,11 @@ export class DynamicRoundComponent implements OnInit {
   currentRoundNumber: number = 1;
   isLoading: boolean = true;
   maxRounds: number = 4; // Default value, will be updated from challenge data
+
+  // Timer properties
+  timeLeft: number = 300; // 5 minutes in seconds
+  timerInterval: any;
+  progress: number = 100;
 
   // Define metrics for the template
   metrics = ['creativity', 'practicality', 'depth', 'humanEdge', 'overall'];
@@ -53,6 +58,35 @@ export class DynamicRoundComponent implements OnInit {
     // Log the current route
     console.log('Current route:', this.route.snapshot.url);
     console.log('Route config:', this.route.snapshot.routeConfig);
+
+    this.startTimer();
+  }
+
+  ngOnDestroy() {
+    if (this.timerInterval) {
+      clearInterval(this.timerInterval);
+    }
+  }
+
+  startTimer() {
+    this.timeLeft = 300; // Reset to 5 minutes
+    this.progress = 100;
+
+    this.timerInterval = setInterval(() => {
+      if (this.timeLeft > 0) {
+        this.timeLeft--;
+        this.progress = (this.timeLeft / 300) * 100;
+      } else {
+        clearInterval(this.timerInterval);
+        this.submitResponse(); // Auto-submit when time runs out
+      }
+    }, 1000);
+  }
+
+  getFormattedTime(): string {
+    const minutes = Math.floor(this.timeLeft / 60);
+    const seconds = this.timeLeft % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
   async loadCurrentRound() {
@@ -185,5 +219,10 @@ export class DynamicRoundComponent implements OnInit {
       advantage: 'tie',
       advantageReason: ''
     };
+  }
+
+  // Add a method to handle navigation
+  navigateBack(): void {
+    this.router.navigate(['/focus']);
   }
 }
