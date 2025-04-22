@@ -1,6 +1,8 @@
 import { Injectable } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { ResultsData } from './results.service';
+import { HttpClient } from '@angular/common/http';
+import { environment } from '../../environments/environment';
 
 interface RoundData {
   response?: string;
@@ -44,12 +46,33 @@ interface ChallengeResponses {
   [key: string]: string;
 }
 
+export interface DashboardData {
+  level: number;
+  overallProgress: number;
+  challengesCompleted: number;
+  totalBadges: number;
+  streakDays: number;
+  skillLevels: Record<string, number>;
+  recentChallenges: Array<{
+    title: string;
+    score: number;
+    focusArea: string;
+    date: string;
+  }>;
+  badges: Array<{
+    name: string;
+    description: string;
+    date: string;
+  }>;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class GameService {
   private roundData: Map<number, RoundData> = new Map();
   private profileId: string | null = null;
+  private apiUrl = environment.apiUrl;
 
   private readonly challenges: { [key: number]: Challenge; } = {
     1: {
@@ -72,7 +95,7 @@ export class GameService {
     'challenge-3': 'While AI can process vast amounts of data quickly, human oversight remains crucial for ethical considerations and ensuring decisions align with societal values and cultural norms.'
   };
 
-  constructor() { }
+  constructor(private http: HttpClient) { }
 
   async generateChallenge(round: number): Promise<Challenge> {
     return this.challenges[round] || {
@@ -262,5 +285,15 @@ export class GameService {
     };
 
     return of(results);
+  }
+
+  getDashboardData(): Promise<DashboardData> {
+    return this.http.get<DashboardData>(`${this.apiUrl}/dashboard`).toPromise()
+      .then(data => {
+        if (!data) {
+          throw new Error('No dashboard data available');
+        }
+        return data;
+      });
   }
 }

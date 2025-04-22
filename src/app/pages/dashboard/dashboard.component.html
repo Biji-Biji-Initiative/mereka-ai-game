@@ -1,0 +1,103 @@
+<div class="min-h-screen bg-gray-50 p-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p class="text-gray-600 mt-1">Track your progress and achievements</p>
+        </div>
+        <div class="bg-gradient-to-r from-indigo-600 to-indigo-500 text-white px-6 py-3 rounded-full font-semibold">
+            Level <span class="text-xl">{{dashboardData.level}}</span>
+        </div>
+    </div>
+
+    <!-- Progress Overview -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white rounded-xl shadow-sm p-6 text-center">
+            <div class="relative w-32 h-32 mx-auto mb-4">
+                <svg class="w-full h-full" viewBox="0 0 36 36">
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                        stroke="#E5E7EB" stroke-width="3" />
+                    <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none"
+                        stroke="#4F46E5" stroke-width="3"
+                        [attr.stroke-dasharray]="dashboardData.overallProgress + ', 100'" />
+                </svg>
+                <div
+                    class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-bold text-gray-900">
+                    {{dashboardData.overallProgress}}%
+                </div>
+            </div>
+            <h3 class="text-gray-600">Overall Progress</h3>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+            <div class="bg-white rounded-xl shadow-sm p-6 text-center">
+                <span class="block text-3xl font-bold text-indigo-600 mb-2">{{dashboardData.challengesCompleted}}</span>
+                <span class="text-gray-600">Challenges Completed</span>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 text-center">
+                <span class="block text-3xl font-bold text-indigo-600 mb-2">{{dashboardData.totalBadges}}</span>
+                <span class="text-gray-600">Badges Earned</span>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm p-6 text-center">
+                <span class="block text-3xl font-bold text-indigo-600 mb-2">{{dashboardData.streakDays}}</span>
+                <span class="text-gray-600">Day Streak</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skills Section -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Skills Development</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div *ngFor="let skill of dashboardData.skillLevels" class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-semibold text-gray-900">{{skill.name}}</h3>
+                    <span class="text-indigo-600 font-semibold">Level {{skill.level}}</span>
+                </div>
+                <div class="h-2 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="h-full bg-gradient-to-r from-indigo-600 to-indigo-500" [style.width.%]="skill.progress">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Challenges -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Recent Challenges</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div *ngFor="let challenge of dashboardData.recentChallenges" class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex justify-between items-center mb-2">
+                    <h3 class="text-lg font-semibold text-gray-900">{{challenge.title}}</h3>
+                    <span class="text-green-600 font-semibold">{{challenge.score}}%</span>
+                </div>
+                <div class="text-gray-600 text-sm mb-2">Focus: {{challenge.focusArea}}</div>
+                <div class="text-gray-500 text-sm">{{formatDate(challenge.date)}}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Badges Section -->
+    <div class="mb-8">
+        <h2 class="text-2xl font-semibold text-gray-900 mb-4">Earned Badges</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div *ngFor="let badge of dashboardData.badges" class="bg-white rounded-xl shadow-sm p-6 text-center">
+                <div class="text-4xl mb-4">🏆</div>
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">{{badge.name}}</h3>
+                <p class="text-gray-600 text-sm mb-2">{{badge.description}}</p>
+                <div class="text-gray-500 text-sm">Earned {{formatDate(badge.date)}}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex justify-center gap-4">
+        <button routerLink="/challenges"
+            class="bg-indigo-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors">
+            Start New Challenge
+        </button>
+        <button routerLink="/results"
+            class="bg-gray-200 text-gray-900 px-6 py-3 rounded-lg font-semibold hover:bg-gray-300 transition-colors">
+            View Detailed Results
+        </button>
+    </div>
+</div>

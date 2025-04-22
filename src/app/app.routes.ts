@@ -11,6 +11,7 @@ import { Round2Component } from './components/rounds/round2.component';
 import { Round3Component } from './components/rounds/round3.component';
 import { ResultsComponent } from './pages/results/results.component';
 import { ShareComponent } from './pages/share/share.component';
+import { DashboardComponent } from './pages/dashboard/dashboard.component';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
@@ -53,7 +54,12 @@ export const routes: Routes = [
   },
   {
     path: 'results',
-    component: ResultsComponent
+    component: ResultsComponent,
+    data: { next: 'dashboard' }
+  },
+  {
+    path: 'dashboard',
+    component: DashboardComponent
   },
   {
     path: 'share',

@@ -1,0 +1,355 @@
+// Variables
+$primary-color: #4f46e5;
+$secondary-color: #6366f1;
+$background-color: #f9fafb;
+$card-background: #ffffff;
+$text-primary: #111827;
+$text-secondary: #6b7280;
+$border-color: #e5e7eb;
+$success-color: #10b981;
+$warning-color: #f59e0b;
+
+// Mixins
+@mixin card-shadow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+@mixin hover-transform {
+  transition: transform 0.2s ease-in-out;
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+// Container
+.dashboard-container {
+  min-height: 100vh;
+  background-color: $background-color;
+  padding: 2rem;
+
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+
+// Header
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+
+  .header-content {
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      color: $text-primary;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      color: $text-secondary;
+      font-size: 1.1rem;
+    }
+  }
+
+  .level-badge {
+    background: linear-gradient(135deg, $primary-color, $secondary-color);
+    padding: 0.75rem 1.5rem;
+    border-radius: 9999px;
+    color: white;
+    font-weight: 600;
+
+    .level-number {
+      font-size: 1.1rem;
+    }
+  }
+}
+
+// Progress Overview
+.progress-overview {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+
+  .overall-progress {
+    text-align: center;
+
+    .progress-circle {
+      width: 150px;
+      height: 150px;
+      border-radius: 50%;
+      background: conic-gradient($primary-color calc(var(--progress) * 1%), $border-color 0);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1rem;
+      position: relative;
+
+      &::before {
+        content: '';
+        position: absolute;
+        width: 120px;
+        height: 120px;
+        background: white;
+        border-radius: 50%;
+      }
+
+      .progress-value {
+        position: relative;
+        font-size: 2rem;
+        font-weight: 700;
+        color: $text-primary;
+      }
+    }
+
+    h3 {
+      color: $text-secondary;
+      font-size: 1.1rem;
+    }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-card {
+      background: $card-background;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      @include card-shadow;
+      @include hover-transform;
+      text-align: center;
+
+      .stat-value {
+        display: block;
+        font-size: 2rem;
+        font-weight: 700;
+        color: $primary-color;
+        margin-bottom: 0.5rem;
+      }
+
+      .stat-label {
+        color: $text-secondary;
+        font-size: 0.9rem;
+      }
+    }
+  }
+}
+
+// Skills Section
+.skills-section {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 1rem;
+  }
+
+  .skills-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+
+    .skill-card {
+      background: $card-background;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      @include card-shadow;
+      @include hover-transform;
+
+      .skill-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+
+        h3 {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: $text-primary;
+        }
+
+        .skill-level {
+          color: $primary-color;
+          font-weight: 600;
+        }
+      }
+
+      .progress-bar {
+        height: 8px;
+        background: $border-color;
+        border-radius: 9999px;
+        overflow: hidden;
+
+        .progress-fill {
+          height: 100%;
+          background: linear-gradient(90deg, $primary-color, $secondary-color);
+          transition: width 0.3s ease-in-out;
+        }
+      }
+    }
+  }
+}
+
+// Recent Challenges
+.recent-challenges {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 1rem;
+  }
+
+  .challenges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+
+    .challenge-card {
+      background: $card-background;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      @include card-shadow;
+      @include hover-transform;
+
+      .challenge-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+
+        h3 {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: $text-primary;
+        }
+
+        .challenge-score {
+          color: $success-color;
+          font-weight: 600;
+        }
+      }
+
+      .challenge-focus {
+        color: $text-secondary;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .challenge-date {
+        color: $text-secondary;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Badges Section
+.badges-section {
+  margin-bottom: 2rem;
+
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: $text-primary;
+    margin-bottom: 1rem;
+  }
+
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .badge-card {
+      background: $card-background;
+      padding: 1.5rem;
+      border-radius: 0.75rem;
+      @include card-shadow;
+      @include hover-transform;
+      text-align: center;
+
+      .badge-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+      }
+
+      h3 {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: $text-primary;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: $text-secondary;
+        font-size: 0.9rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .badge-date {
+        color: $text-secondary;
+        font-size: 0.8rem;
+      }
+    }
+  }
+}
+
+// Action Buttons
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+
+  button {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+
+    &.btn-primary {
+      background: $primary-color;
+      color: white;
+
+      &:hover {
+        background: darken($primary-color, 5%);
+      }
+    }
+
+    &.btn-secondary {
+      background: $border-color;
+      color: $text-primary;
+
+      &:hover {
+        background: darken($border-color, 5%);
+      }
+    }
+  }
+}
