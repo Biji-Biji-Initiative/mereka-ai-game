@@ -32,12 +32,27 @@ export class AppComponent implements OnInit {
       try {
         const user = await this.userService.getUser(userId);
 
-        if (user && user.currentRoute) {
+        if (user) {
           // Get current URL path
           const currentPath = window.location.pathname;
 
-          // If not already on the correct route, redirect
-          if (currentPath !== user.currentRoute) {
+          // If user is on welcome or root page, redirect to dashboard
+          if (currentPath === '/' || currentPath === '/welcome') {
+            console.log('Redirecting registered user to dashboard');
+            this.router.navigate(['/dashboard']);
+          }
+          // If the currentRoute is '/results', reset it to empty string
+          else if (user.currentRoute === '/results') {
+            console.log('Resetting results route on app load');
+            await this.userService.updateUserRoute(userId, '');
+
+            // If user is on the results page, redirect to dashboard
+            if (currentPath === '/results') {
+              this.router.navigate(['/dashboard']);
+            }
+          }
+          // If not already on the correct route and not on results page, redirect
+          else if (currentPath !== user.currentRoute && currentPath !== '/results') {
             this.router.navigate([user.currentRoute]);
           }
         }
