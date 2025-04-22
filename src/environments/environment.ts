@@ -8,6 +8,7 @@ export const environment = {
     storageBucket: "mereka-ai-game.firebasestorage.app",
     messagingSenderId: "939508804715",
     appId: "1:939508804715:web:71ccc7faab3879aff5552e",
-    measurementId: "G-NJWRDG4PWP"
+    measurementId: "G-NJWRDG4PWP",
+    databaseURL: "https://mereka-ai-game.firebaseio.com"
   }
 };

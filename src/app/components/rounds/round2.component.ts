@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { BaseRoundComponent } from './base-round.component';
-import { GameService } from '../../services/game.service';
+import { ChallengeService, ChallengeResponse } from '../../services/challenge.service';
+import { UserService } from '../../services/user.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
@@ -17,7 +18,8 @@ export class Round2Component extends BaseRoundComponent {
 
   constructor(
     protected override router: Router,
-    private gameService: GameService
+    private challengeService: ChallengeService,
+    private userService: UserService
   ) {
     super(router);
     this.roundNumber = 2;
@@ -25,26 +27,34 @@ export class Round2Component extends BaseRoundComponent {
 
   override ngOnInit() {
     // Check if round 1 is completed
-    const round1Data = this.gameService.getRoundData(1);
-    if (!round1Data?.response) {
-      this.router.navigate(['/round1']);
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
       return;
     }
-    this.round1Response = round1Data.response;
+
+    this.challengeService.getRoundResponse(userId, 1).then(round1Data => {
+      if (!round1Data?.response) {
+        this.router.navigate(['/round1']);
+        return;
+      }
+      this.round1Response = round1Data.response;
+    });
+
     super.ngOnInit();
   }
 
   protected override async loadChallenge(): Promise<void> {
     try {
-      const challenge = await this.gameService.generateChallenge(2);
+      const challenge = await this.challengeService.generateChallenge(2);
       this.challenge = {
         id: challenge.id,
-        title: 'Solution Design',
+        title: 'Building on Round 1',
         description: challenge.description,
         steps: [
-          'Review the patterns from Round 1',
-          'Design innovative solutions',
-          'Explain your approach'
+          'Review your Round 1 solution',
+          'Identify areas for improvement',
+          'Propose an enhanced solution'
         ]
       };
       this.isLoading = false;
@@ -57,20 +67,27 @@ export class Round2Component extends BaseRoundComponent {
   protected override async submitResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
-    const aiResponse = await this.gameService.generateAIResponse(this.challenge.id);
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
+      return;
+    }
 
-    await this.gameService.submitResponse({
+    const aiResponse = await this.challengeService.generateAIResponse(this.challenge.id);
+
+    const challengeResponse: ChallengeResponse = {
       challengeId: this.challenge.id,
       response: this.userResponse,
-      round: 2,
       aiResponse
-    });
+    };
+
+    await this.challengeService.saveRoundResponse(userId, 2, challengeResponse);
   }
 
   protected override async evaluateResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
-    const evaluation = await this.gameService.evaluateResponse(
+    const evaluation = await this.challengeService.evaluateResponse(
       2,
       this.userResponse,
       this.challenge.id

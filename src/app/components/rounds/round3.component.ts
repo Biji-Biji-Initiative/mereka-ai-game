@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { BaseRoundComponent } from './base-round.component';
-import { GameService } from '../../services/game.service';
+import { ChallengeService, ChallengeResponse } from '../../services/challenge.service';
+import { UserService } from '../../services/user.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
@@ -18,7 +19,8 @@ export class Round3Component extends BaseRoundComponent {
 
   constructor(
     protected override router: Router,
-    private gameService: GameService
+    private challengeService: ChallengeService,
+    private userService: UserService
   ) {
     super(router);
     this.roundNumber = 3;
@@ -26,22 +28,30 @@ export class Round3Component extends BaseRoundComponent {
 
   override ngOnInit() {
     // Check if previous rounds are completed
-    const round1Data = this.gameService.getRoundData(1);
-    const round2Data = this.gameService.getRoundData(2);
-
-    if (!round1Data?.response || !round2Data?.response) {
-      this.router.navigate([!round1Data?.response ? '/round1' : '/round2']);
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
       return;
     }
 
-    this.round1Response = round1Data.response;
-    this.round2Response = round2Data.response;
+    Promise.all([
+      this.challengeService.getRoundResponse(userId, 1),
+      this.challengeService.getRoundResponse(userId, 2)
+    ]).then(([round1Data, round2Data]) => {
+      if (!round1Data?.response || !round2Data?.response) {
+        this.router.navigate([!round1Data?.response ? '/round1' : '/round2']);
+        return;
+      }
+      this.round1Response = round1Data.response;
+      this.round2Response = round2Data.response;
+    });
+
     super.ngOnInit();
   }
 
   protected override async loadChallenge(): Promise<void> {
     try {
-      const challenge = await this.gameService.generateChallenge(3);
+      const challenge = await this.challengeService.generateChallenge(3);
       this.challenge = {
         id: challenge.id,
         title: 'Ethical Analysis',
@@ -62,20 +72,27 @@ export class Round3Component extends BaseRoundComponent {
   protected override async submitResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
-    const aiResponse = await this.gameService.generateAIResponse(this.challenge.id);
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
+      return;
+    }
 
-    await this.gameService.submitResponse({
+    const aiResponse = await this.challengeService.generateAIResponse(this.challenge.id);
+
+    const challengeResponse: ChallengeResponse = {
       challengeId: this.challenge.id,
       response: this.userResponse,
-      round: 3,
       aiResponse
-    });
+    };
+
+    await this.challengeService.saveRoundResponse(userId, 3, challengeResponse);
   }
 
   protected override async evaluateResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
-    const evaluation = await this.gameService.evaluateResponse(
+    const evaluation = await this.challengeService.evaluateResponse(
       3,
       this.userResponse,
       this.challenge.id

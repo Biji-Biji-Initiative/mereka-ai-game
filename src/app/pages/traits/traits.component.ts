@@ -1,7 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { QuestionnaireComponent, Question } from '../../components/questionnaire/questionnaire.component';
+import { TraitsService, TraitsData } from '../../services/traits.service';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-traits',
@@ -10,9 +12,10 @@ import { QuestionnaireComponent, Question } from '../../components/questionnaire
   templateUrl: './traits.component.html',
   styleUrl: './traits.component.scss'
 })
-export class TraitsComponent {
+export class TraitsComponent implements OnInit {
   currentQuestionIndex = 0;
   answers: number[] = [];
+  isSubmitting = false;
 
   questions: Question[] = [
     {
@@ -99,22 +102,60 @@ export class TraitsComponent {
 
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private traitsService: TraitsService,
+    private userService: UserService
   ) {
     this.answers = new Array(this.questions.length).fill(null);
+  }
+
+  ngOnInit() {
+    // Check if user exists
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
+      return;
+    }
   }
 
   onAnswerChange(answer: number) {
     this.answers[this.currentQuestionIndex] = answer;
   }
 
-  onNextQuestion() {
+  async onNextQuestion() {
+    if (this.isSubmitting) return;
+
     if (this.currentQuestionIndex < this.questions.length - 1) {
       this.currentQuestionIndex++;
     } else {
-      // Save traits data here if needed
-      const nextRoute = this.route.snapshot.data['next'];
-      this.router.navigate(['/' + nextRoute]);
+      this.isSubmitting = true;
+      try {
+        const userId = this.userService.getCurrentUserId();
+        if (!userId) {
+          this.router.navigate(['/context']);
+          return;
+        }
+
+        // Save traits data
+        const traitsData: TraitsData = {
+          answers: this.answers.map((answer, index) => ({
+            questionId: this.questions[index].id,
+            answer
+          })),
+          questions: this.questions
+        };
+
+        await this.traitsService.saveTraits(userId, traitsData);
+
+        // Navigate to next route
+        const nextRoute = this.route.snapshot.data['next'];
+        this.router.navigate(['/' + nextRoute]);
+      } catch (error) {
+        console.error('Error saving traits data:', error);
+        // Handle error appropriately
+      } finally {
+        this.isSubmitting = false;
+      }
     }
   }
 

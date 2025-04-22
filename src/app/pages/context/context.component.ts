@@ -2,13 +2,7 @@ import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
-
-interface UserContext {
-  name: string;
-  email: string;
-  professionalTitle: string;
-  location: string;
-}
+import { UserService, UserContext } from '../../services/user.service';
 
 @Component({
   selector: 'app-context',
@@ -25,15 +19,30 @@ export class ContextComponent {
     location: ''
   };
 
+  isSubmitting = false;
+
   constructor(
     private router: Router,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private userService: UserService
   ) { }
 
-  onSubmit() {
-    console.log('Form submitted:', this.userContext);
-    // TODO: Save user context
-    const nextRoute = this.route.snapshot.data['next'];
-    this.router.navigate(['/' + nextRoute]);
+  async onSubmit() {
+    if (this.isSubmitting) return;
+
+    this.isSubmitting = true;
+    try {
+      // Create user and save context data
+      await this.userService.createUser(this.userContext);
+
+      // Navigate to next route
+      const nextRoute = this.route.snapshot.data['next'];
+      this.router.navigate(['/' + nextRoute]);
+    } catch (error) {
+      console.error('Error saving context:', error);
+      // Handle error appropriately
+    } finally {
+      this.isSubmitting = false;
+    }
   }
 }

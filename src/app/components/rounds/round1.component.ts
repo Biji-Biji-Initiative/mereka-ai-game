@@ -1,7 +1,8 @@
 import { Component } from '@angular/core';
 import { Router } from '@angular/router';
 import { BaseRoundComponent } from './base-round.component';
-import { GameService } from '../../services/game.service';
+import { ChallengeService, ChallengeResponse } from '../../services/challenge.service';
+import { UserService } from '../../services/user.service';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 
@@ -15,7 +16,8 @@ import { CommonModule } from '@angular/common';
 export class Round1Component extends BaseRoundComponent {
   constructor(
     protected override router: Router,
-    private gameService: GameService
+    private challengeService: ChallengeService,
+    private userService: UserService
   ) {
     super(router);
     this.roundNumber = 1;
@@ -23,7 +25,7 @@ export class Round1Component extends BaseRoundComponent {
 
   protected override async loadChallenge(): Promise<void> {
     try {
-      const challenge = await this.gameService.generateChallenge(1);
+      const challenge = await this.challengeService.generateChallenge(1);
       this.challenge = {
         id: challenge.id,
         title: 'Pattern Recognition',
@@ -44,20 +46,27 @@ export class Round1Component extends BaseRoundComponent {
   protected override async submitResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
-    const aiResponse = await this.gameService.generateAIResponse(this.challenge.id);
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
+      return;
+    }
 
-    await this.gameService.submitResponse({
+    const aiResponse = await this.challengeService.generateAIResponse(this.challenge.id);
+
+    const challengeResponse: ChallengeResponse = {
       challengeId: this.challenge.id,
       response: this.userResponse,
-      round: 1,
       aiResponse
-    });
+    };
+
+    await this.challengeService.saveRoundResponse(userId, 1, challengeResponse);
   }
 
   protected override async evaluateResponse(): Promise<void> {
     if (!this.challenge?.id) return;
 
-    const evaluation = await this.gameService.evaluateResponse(
+    const evaluation = await this.challengeService.evaluateResponse(
       1,
       this.userResponse,
       this.challenge.id
