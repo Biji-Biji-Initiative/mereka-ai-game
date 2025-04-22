@@ -10,29 +10,58 @@
 
             <!-- Navigation Links -->
             <div class="hidden md:flex items-center space-x-6">
-                <a routerLink="/game"
-                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Game</a>
-                <a routerLink="/leaderboard"
-                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Leaderboard</a>
+                <a routerLink="/dashboard"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    Dashboard
+                </a>
                 <a routerLink="/challenges"
-                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Challenges</a>
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    Challenges
+                </a>
+                <a routerLink="/leaderboard"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    Leaderboard
+                </a>
+                <a routerLink="/tournaments"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    Tournaments
+                </a>
+                <a routerLink="/help"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    Help
+                </a>
             </div>
 
-            <!-- Auth Section -->
+            <!-- Actions -->
             <div class="flex items-center space-x-4">
+                <!-- Reset Game Button -->
+                <button (click)="resetGame()"
+                    class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-md">
+                    Reset Game
+                </button>
+
+                <!-- Auth Section -->
                 <ng-container *ngIf="!isAuthenticated">
-                    <a routerLink="/signin"
-                        class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">Login</a>
-                    <a routerLink="/signup"
+                    <a routerLink="/auth/login"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                        Login
+                    </a>
+                    <a routerLink="/auth/register"
                         class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors">
                         Register
                     </a>
                 </ng-container>
                 <ng-container *ngIf="isAuthenticated">
-                    <button class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    <a routerLink="/profile"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                         Profile
-                    </button>
-                    <button class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                    </a>
+                    <a routerLink="/settings"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
+                        Settings
+                    </a>
+                    <button (click)="logout()"
+                        class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
                         Logout
                     </button>
                 </ng-container>

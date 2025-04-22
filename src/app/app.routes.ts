@@ -17,6 +17,8 @@ import { ProfileComponent } from './pages/profile/profile.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { HelpComponent } from './pages/help/help.component';
 import { TournamentsComponent } from './pages/tournaments/tournaments.component';
+import { LeaderboardComponent } from './pages/leaderboard/leaderboard.component';
+import { ChallengesComponent } from './pages/challenges/challenges.component';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
@@ -91,5 +93,13 @@ export const routes: Routes = [
   {
     path: 'tournaments',
     component: TournamentsComponent
+  },
+  {
+    path: 'leaderboard',
+    component: LeaderboardComponent
+  },
+  {
+    path: 'challenges',
+    component: ChallengesComponent
   }
 ];
