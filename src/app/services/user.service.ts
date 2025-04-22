@@ -29,7 +29,7 @@ export class UserService extends BaseService {
   async updateUserRoute(userId: string, route: string): Promise<void> {
     console.log(`Updating user ${userId} route to: ${route}`);
     // Ensure route starts with a slash
-    const routeWithSlash = route.startsWith('/') ? route : `/${route}`;
+    const routeWithSlash = (route ? (route.startsWith('/') ? route : `/${route}`) : '');
     await this.updateDocument(this.COLLECTION, userId, { currentRoute: routeWithSlash });
   }
 

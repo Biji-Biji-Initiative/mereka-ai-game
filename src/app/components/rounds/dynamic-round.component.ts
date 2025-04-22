@@ -183,7 +183,7 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
       this.navigationService.navigateToNextRound(this.currentRoundNumber, this.maxRounds);
     } else {
       console.log('Navigating to results page');
-      this.navigationService.navigateToNextRoute(`round/${this.currentRoundNumber}`, 'results');
+      this.router.navigate(['/results']);
     }
   }
 
