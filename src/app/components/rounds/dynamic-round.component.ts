@@ -1,66 +1,41 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { ChallengeService } from '../../services/challenge.service';
-import { RoundData } from '../../models/challenge.model';
+import { RoundData, ChallengeResponse } from '../../models/challenge.model';
 
 @Component({
   selector: 'app-dynamic-round',
   standalone: true,
   imports: [CommonModule, FormsModule],
-  template: `
-    <div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
-      <div class="relative py-3 sm:max-w-xl sm:mx-auto">
-        <div class="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
-          <div class="max-w-md mx-auto">
-            <div class="divide-y divide-gray-200">
-              <div class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
-                <div *ngIf="currentRound" class="mb-8">
-                  <h2 class="text-2xl font-bold mb-4">Round {{roundNumber}}</h2>
-                  <div class="mb-4">
-                    <p class="font-semibold">Question:</p>
-                    <p class="mt-2">{{currentRound.question}}</p>
-                  </div>
-                  <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700">Your Answer:</label>
-                    <textarea
-                      [(ngModel)]="userResponse"
-                      class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                      rows="4"
-                      placeholder="Type your answer here...">
-                    </textarea>
-                  </div>
-                  <div class="flex justify-end space-x-4">
-                    <button
-                      (click)="submitResponse()"
-                      [disabled]="!userResponse || isSubmitting"
-                      class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
-                      {{ isSubmitting ? 'Submitting...' : 'Submit' }}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `
+  templateUrl: './dynamic-round.component.html',
+  styleUrls: ['./dynamic-round.component.scss']
 })
 export class DynamicRoundComponent implements OnInit {
   currentRound: RoundData | null = null;
   userResponse: string = '';
   isSubmitting: boolean = false;
   roundNumber: number = 1;
+  evaluation: ChallengeResponse | null = null;
+  showAiThinking: boolean = false;
+  previousResponses: { [key: number]: string; } = {};
+
+  // Define metrics for the template
+  metrics = ['creativity', 'practicality', 'depth', 'humanEdge', 'overall'];
 
   constructor(
     private challengeService: ChallengeService,
-    private router: Router
+    private router: Router,
+    private route: ActivatedRoute
   ) { }
 
   async ngOnInit() {
-    await this.loadCurrentRound();
+    // Get the round number from the route parameter
+    this.route.params.subscribe(params => {
+      this.roundNumber = parseInt(params['round'], 10);
+      this.loadCurrentRound();
+    });
   }
 
   private async loadCurrentRound() {
@@ -73,32 +48,52 @@ export class DynamicRoundComponent implements OnInit {
 
       const challenge = await this.challengeService.getChallenge(challengeId);
       if (challenge) {
-        this.roundNumber = challenge.currentRound;
+        // Set the current round based on the route parameter
         this.currentRound = challenge.rounds[this.roundNumber - 1];
+
+        // If this round doesn't exist yet, create it
+        if (!this.currentRound) {
+          this.currentRound = {
+            roundNumber: this.roundNumber,
+            question: challenge.questions[this.roundNumber - 1] || 'No question available',
+            answer: ''
+          };
+        }
+
+        // Load previous responses
+        this.loadPreviousResponses(challenge);
       }
     } catch (error) {
       console.error('Error loading round:', error);
     }
   }
 
+  private loadPreviousResponses(challenge: any) {
+    this.previousResponses = {};
+    challenge.rounds.forEach((round: RoundData) => {
+      if (round.roundNumber < this.roundNumber && round.answer) {
+        this.previousResponses[round.roundNumber] = round.answer;
+      }
+    });
+  }
+
   async submitResponse() {
     if (!this.currentRound || !this.userResponse) return;
 
     this.isSubmitting = true;
+    this.showAiThinking = true;
     try {
       const challengeId = localStorage.getItem('currentChallengeId');
       if (!challengeId) {
         throw new Error('No challenge ID found');
       }
 
-      await this.challengeService.submitResponse(challengeId, this.userResponse);
+      // Submit response and get evaluation
+      this.evaluation = await this.challengeService.submitResponse(challengeId, this.userResponse);
 
       // Move to next round or complete the challenge
-      if (this.roundNumber < 3) {
-        this.roundNumber++;
-        await this.challengeService.setCurrentRound(this.roundNumber);
-        await this.loadCurrentRound();
-        this.userResponse = '';
+      if (this.roundNumber < 4) {
+        this.router.navigate(['/round', this.roundNumber + 1]);
       } else {
         this.router.navigate(['/complete']);
       }
@@ -106,6 +101,49 @@ export class DynamicRoundComponent implements OnInit {
       console.error('Error submitting response:', error);
     } finally {
       this.isSubmitting = false;
+      this.showAiThinking = false;
     }
+  }
+
+  handleContinue() {
+    if (this.roundNumber < 4) {
+      this.router.navigate(['/round', this.roundNumber + 1]);
+    } else {
+      this.router.navigate(['/complete']);
+    }
+  }
+
+  // Helper methods for the template
+  getMetricValue(metric: string): number {
+    if (!this.evaluation?.evaluation?.metrics) return 0;
+
+    // Use type assertion to handle the dynamic property access
+    const metrics = this.evaluation.evaluation.metrics as Record<string, number>;
+    return metrics[metric] || 0;
+  }
+
+  getFeedback(): string[] {
+    return this.evaluation?.evaluation?.feedback || [];
+  }
+
+  getStrengths(): string[] {
+    return this.evaluation?.evaluation?.strengths || [];
+  }
+
+  getImprovements(): string[] {
+    return this.evaluation?.evaluation?.improvements || [];
+  }
+
+  getBadges(): string[] {
+    return this.evaluation?.evaluation?.badges || [];
+  }
+
+  getComparison(): any {
+    return this.evaluation?.evaluation?.comparison || {
+      userScore: 0,
+      rivalScore: 0,
+      advantage: 'tie',
+      advantageReason: ''
+    };
   }
 }

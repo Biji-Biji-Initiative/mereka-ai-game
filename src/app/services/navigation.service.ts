@@ -68,7 +68,7 @@ export class NavigationService {
   }
 
   async navigateToNextRound(currentRound: number): Promise<void> {
-    if (currentRound < 3) {
+    if (currentRound < 4) {
       await this.navigateToNextRoute(`round/${currentRound}`, `round/${currentRound + 1}`);
     } else {
       await this.navigateToNextRoute(`round/${currentRound}`, 'results');

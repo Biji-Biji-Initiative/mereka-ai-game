@@ -76,11 +76,10 @@ export class FocusComponent {
         const challengeId = await this.challengeService.createChallenge(focusData);
 
         // Store challenge ID in localStorage for later use
-        localStorage.setItem('mereka_challenge_id', challengeId);
+        localStorage.setItem('currentChallengeId', challengeId);
 
-        // Navigate to next route
-        const nextRoute = this.route.snapshot.data['next'];
-        await this.navigationService.navigateToNextRoute('focus', nextRoute);
+        // Navigate to first round using the correct route format
+        this.router.navigate(['/round', 1]);
       } catch (error) {
         console.error('Error creating challenge:', error);
       } finally {

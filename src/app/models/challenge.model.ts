@@ -18,6 +18,24 @@ export interface ChallengeResponse {
     challengeId: string;
     response: string;
     aiResponse: string;
-    evaluation: any;
+    evaluation: {
+        metrics: {
+            creativity: number;
+            practicality: number;
+            depth: number;
+            humanEdge: number;
+            overall: number;
+        };
+        feedback: string[];
+        strengths: string[];
+        improvements: string[];
+        comparison: {
+            userScore: number;
+            rivalScore: number;
+            advantage: 'user' | 'rival' | 'tie';
+            advantageReason: string;
+        };
+        badges: string[];
+    };
     question: string;
 }

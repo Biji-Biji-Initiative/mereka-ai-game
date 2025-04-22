@@ -1,163 +1,134 @@
-<div class="container mx-auto px-4 py-8 space-y-8">
-    <!-- Loading State -->
-    <div *ngIf="isLoading" class="flex justify-center items-center min-h-[50vh]">
-        <div class="text-lg text-gray-600 dark:text-gray-300">
-            Loading challenge...
-        </div>
-    </div>
-
-    <!-- Challenge Card -->
-    <div *ngIf="!isLoading && !showEvaluation" class="card w-full max-w-4xl mx-auto shadow-lg">
-        <!-- Card Header -->
-        <div class="card-header">
-            <h2 class="text-2xl font-bold text-primary">{{challenge?.title}}</h2>
-        </div>
-
-        <!-- Card Content -->
-        <div class="card-content space-y-6">
-            <!-- Challenge Description -->
-            <div class="border-l-4 border-primary p-4 bg-gray-50 dark:bg-gray-800">
-                <h3 class="font-semibold text-lg mb-2">Challenge:</h3>
-                <p class="text-gray-800 dark:text-gray-200">
-                    {{challenge?.description}}
-                </p>
+<div class="min-h-screen bg-gray-100 py-6 flex flex-col justify-center sm:py-12">
+  <div class="relative py-3 sm:max-w-xl sm:mx-auto">
+    <div class="relative px-4 py-10 bg-white shadow-lg sm:rounded-3xl sm:p-20">
+      <div class="max-w-md mx-auto">
+        <div class="divide-y divide-gray-200">
+          <!-- Challenge Card -->
+          <div *ngIf="!evaluation" class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+            <div *ngIf="currentRound" class="mb-8">
+              <h2 class="text-2xl font-bold mb-4">Round {{roundNumber}}</h2>
+              <div class="mb-4">
+                <p class="font-semibold">Question:</p>
+                <p class="mt-2">{{currentRound.question}}</p>
+              </div>
+              <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700">Your Answer:</label>
+                <textarea [(ngModel)]="userResponse"
+                  class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                  rows="4" placeholder="Type your answer here...">
+                </textarea>
+              </div>
+              <div class="flex justify-end space-x-4">
+                <button (click)="submitResponse()" [disabled]="!userResponse || isSubmitting"
+                  class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
+                  {{ isSubmitting ? 'Submitting...' : 'Submit' }}
+                </button>
+              </div>
             </div>
+          </div>
 
-            <!-- Previous Round Responses -->
-            <div *ngIf="Object.keys(previousResponses).length > 0" class="space-y-4">
-                <h3 class="font-semibold text-lg">Previous Responses:</h3>
-                <div *ngFor="let round of Object.keys(previousResponses)"
-                    class="border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <h4 class="font-medium mb-2">Round {{round}}:</h4>
-                    <p class="text-gray-800 dark:text-gray-200">{{previousResponses[round]}}</p>
-                </div>
-            </div>
+          <!-- Evaluation View -->
+          <div *ngIf="evaluation" class="py-8 text-base leading-6 space-y-4 text-gray-700 sm:text-lg sm:leading-7">
+            <h2 class="text-2xl font-bold mb-4">Round {{roundNumber}} Evaluation</h2>
 
-            <!-- User Response Section -->
-            <div class="space-y-3">
-                <h3 class="font-semibold text-lg">Your Response:</h3>
-                <textarea [(ngModel)]="userResponse" class="w-full min-h-[150px] p-3 border rounded-lg resize-y"
-                    placeholder="Type your response here..."></textarea>
-            </div>
-        </div>
-
-        <!-- Card Footer -->
-        <div class="card-footer flex justify-between mt-6">
-            <button class="btn btn-outline" (click)="router.navigate(['/focus'])" *ngIf="roundNumber === 1">
-                Back
-            </button>
-            <button class="btn btn-primary" [disabled]="!userResponse.trim()" (click)="submitResponse()">
-                Submit Response
-            </button>
-        </div>
-    </div>
-
-    <!-- Evaluation View -->
-    <div *ngIf="showEvaluation" class="card w-full max-w-4xl mx-auto shadow-lg">
-        <div class="card-header">
-            <h2 class="text-2xl font-bold text-primary">Round {{roundNumber}} Evaluation</h2>
-        </div>
-
-        <div class="card-content space-y-6">
             <!-- Performance Metrics -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="space-y-4">
-                    <h3 class="font-semibold text-lg">Your Performance</h3>
-
-                    <ng-container *ngIf="evaluation?.metrics as metrics">
-                        <div class="space-y-2"
-                            *ngFor="let metric of ['creativity', 'practicality', 'depth', 'humanEdge', 'overall']">
-                            <div class="flex justify-between items-center">
-                                <span>{{metric | titlecase}}</span>
-                                <span>{{metrics[metric]}}%</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="h-2 bg-primary" [style.width.%]="metrics[metric]"></div>
-                            </div>
-                        </div>
-                    </ng-container>
+            <div class="space-y-4">
+              <h3 class="font-semibold text-lg">Your Performance</h3>
+              <div class="space-y-2" *ngFor="let metric of metrics">
+                <div class="flex justify-between items-center">
+                  <span>{{metric | titlecase}}</span>
+                  <span>{{getMetricValue(metric)}}%</span>
                 </div>
-
-                <!-- Feedback and Comparison -->
-                <div class="space-y-4">
-                    <h3 class="font-semibold text-lg">Feedback</h3>
-                    <div class="border p-4 rounded-lg bg-white dark:bg-gray-800">
-                        <p *ngFor="let feedback of evaluation?.feedback" class="mb-2 text-gray-800 dark:text-gray-200">
-                            {{feedback}}
-                        </p>
-                    </div>
-
-                    <h3 class="font-semibold text-lg mt-4">Comparison with AI</h3>
-                    <div class="border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
-                        <div class="flex justify-between items-center mb-2">
-                            <span>Your Score</span>
-                            <span class="font-bold">{{evaluation?.comparison?.userScore}}%</span>
-                        </div>
-                        <div class="flex justify-between items-center mb-4">
-                            <span>AI Score</span>
-                            <span class="font-bold">{{evaluation?.comparison?.rivalScore}}%</span>
-                        </div>
-                        <p class="text-gray-800 dark:text-gray-200">
-                            <span class="font-semibold">Advantage: </span>
-                            {{evaluation?.comparison?.advantage === 'user' ? 'You' :
-                            evaluation?.comparison?.advantage === 'rival' ? 'AI' : 'Tie'}}
-                        </p>
-                        <p class="text-gray-800 dark:text-gray-200 mt-2">
-                            {{evaluation?.comparison?.advantageReason}}
-                        </p>
-                    </div>
+                <div class="h-2 bg-gray-200 rounded">
+                  <div class="h-2 bg-indigo-600 rounded" [style.width.%]="getMetricValue(metric)"></div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Feedback -->
+            <div class="space-y-4">
+              <h3 class="font-semibold text-lg">Feedback</h3>
+              <div class="border p-4 rounded-lg bg-gray-50">
+                <p *ngFor="let feedback of getFeedback()" class="mb-2">
+                  {{feedback}}
+                </p>
+              </div>
+            </div>
+
+            <!-- Comparison with AI -->
+            <div class="space-y-4">
+              <h3 class="font-semibold text-lg">Comparison with AI</h3>
+              <div class="border p-4 rounded-lg bg-gray-50">
+                <div class="flex justify-between items-center mb-2">
+                  <span>Your Score</span>
+                  <span class="font-bold">{{getComparison().userScore}}%</span>
+                </div>
+                <div class="flex justify-between items-center mb-4">
+                  <span>AI Score</span>
+                  <span class="font-bold">{{getComparison().rivalScore}}%</span>
+                </div>
+                <p>
+                  <span class="font-semibold">Advantage: </span>
+                  {{getComparison().advantage === 'user' ? 'You' :
+                  getComparison().advantage === 'rival' ? 'AI' : 'Tie'}}
+                </p>
+                <p class="mt-2">
+                  {{getComparison().advantageReason}}
+                </p>
+              </div>
             </div>
 
             <!-- Strengths and Improvements -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <h3 class="font-semibold text-lg mb-3">Your Strengths</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li *ngFor="let strength of evaluation?.strengths" class="text-gray-800 dark:text-gray-200">
-                            {{strength}}
-                        </li>
-                    </ul>
-                </div>
-
-                <div>
-                    <h3 class="font-semibold text-lg mb-3">Areas for Improvement</h3>
-                    <ul class="list-disc pl-5 space-y-1">
-                        <li *ngFor="let improvement of evaluation?.improvements"
-                            class="text-gray-800 dark:text-gray-200">
-                            {{improvement}}
-                        </li>
-                    </ul>
-                </div>
+            <div class="grid grid-cols-1 gap-6">
+              <div>
+                <h3 class="font-semibold text-lg mb-3">Your Strengths</h3>
+                <ul class="list-disc pl-5 space-y-1">
+                  <li *ngFor="let strength of getStrengths()">
+                    {{strength}}
+                  </li>
+                </ul>
+              </div>
+              <div>
+                <h3 class="font-semibold text-lg mb-3">Areas for Improvement</h3>
+                <ul class="list-disc pl-5 space-y-1">
+                  <li *ngFor="let improvement of getImprovements()">
+                    {{improvement}}
+                  </li>
+                </ul>
+              </div>
             </div>
 
             <!-- Badges -->
-            <div *ngIf="evaluation?.badges?.length" class="mt-6">
-                <h3 class="font-semibold text-lg mb-3">Badges Earned</h3>
-                <div class="flex flex-wrap gap-2">
-                    <span *ngFor="let badge of evaluation?.badges || []" class="badge badge-secondary">
-                        {{badge | titlecase}}
-                    </span>
-                </div>
+            <div *ngIf="getBadges().length" class="mt-6">
+              <h3 class="font-semibold text-lg mb-3">Badges Earned</h3>
+              <div class="flex flex-wrap gap-2">
+                <span *ngFor="let badge of getBadges()"
+                  class="px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+                  {{badge | titlecase}}
+                </span>
+              </div>
             </div>
-        </div>
 
-        <!-- Evaluation Footer -->
-        <div class="card-footer flex justify-end mt-6">
-            <button class="btn btn-primary" (click)="handleContinue()">
-                {{roundNumber === 3 ? 'View Results' : 'Continue to Round ' + (roundNumber + 1)}}
-            </button>
+            <!-- Continue Button -->
+            <div class="flex justify-end mt-6">
+              <button (click)="handleContinue()"
+                class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                {{roundNumber === 4 ? 'View Results' : 'Continue to Round ' + (roundNumber + 1)}}
+              </button>
+            </div>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
+</div>
 
-    <!-- AI Thinking Overlay -->
-    <div *ngIf="showAiThinking"
-        class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-        <div class="bg-white dark:bg-gray-800 p-8 rounded-lg max-w-md w-full text-center">
-            <h3 class="text-xl font-bold mb-4">AI is analyzing your response</h3>
-            <p class="mt-4 text-gray-600 dark:text-gray-300">
-                The AI is evaluating your response to identify your human edge.
-            </p>
-        </div>
-    </div>
+<!-- AI Thinking Overlay -->
+<div *ngIf="showAiThinking" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+  <div class="bg-white p-8 rounded-lg max-w-md w-full text-center">
+    <h3 class="text-xl font-bold mb-4">AI is analyzing your response</h3>
+    <p class="mt-4 text-gray-600">
+      The AI is evaluating your response to identify your human edge.
+    </p>
+  </div>
 </div>

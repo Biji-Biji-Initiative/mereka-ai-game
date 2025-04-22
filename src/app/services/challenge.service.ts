@@ -118,28 +118,35 @@ export class ChallengeService extends BaseService {
 
   async createChallenge(focusData: FocusData): Promise<string> {
     const userId = this.userService.getCurrentUserId();
-
     if (!userId) {
       throw new Error('User not found');
     }
 
-    // Generate all questions based on focus area
+    // Generate questions based on focus area
     const questions = this.generateAllQuestions(focusData.focusArea);
-    const description = questions[0]; // First question as description
 
-    const challengeId = await this.createDocument(this.COLLECTION, {
+    // Create initial challenge data
+    const challenge: Challenge = {
+      id: '',
       userId,
       focus: focusData,
       rounds: [],
-      description,
+      description: focusData.description,
       questions,
       currentRound: 1,
       createdAt: new Date(),
       updatedAt: new Date()
-    });
+    };
 
-    // Store the challenge ID in localStorage
-    localStorage.setItem('mereka_challenge_id', challengeId);
+    // Create the challenge document
+    const challengeId = await this.createDocument(this.COLLECTION, challenge);
+
+    // Update the challenge with its ID
+    await this.updateDocument(this.COLLECTION, challengeId, { id: challengeId });
+
+    // Save the current challenge ID to the user's document
+    await this.userService.updateUserRoute(userId, '/round1');
+    await this.updateDocument('users', userId, { currentChallengeId: challengeId });
 
     return challengeId;
   }
@@ -217,19 +224,50 @@ export class ChallengeService extends BaseService {
   }
 
   async submitResponse(challengeId: string, response: string): Promise<ChallengeResponse> {
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge) {
+      throw new Error('Challenge not found');
+    }
+
+    // Get the current round number from the challenge
+    const currentRound = challenge.currentRound;
+
+    // Generate AI response
     const aiResponse = await this.generateAIResponse(challengeId);
-    const currentRound = await this.getCurrentRound();
+
+    // Evaluate the response
     const evaluation = await this.evaluateResponse(currentRound, response, challengeId);
 
+    // Create round data
+    const roundData: RoundData = {
+      roundNumber: currentRound,
+      question: challenge.questions[currentRound - 1],
+      answer: response,
+      aiResponse,
+      evaluation
+    };
+
+    // Add the round data to the challenge
+    await this.addRound(challengeId, roundData);
+
+    // Create the challenge response
     const challengeResponse: ChallengeResponse = {
       challengeId,
       response,
       aiResponse,
       evaluation,
-      question: (await this.getChallenge(challengeId))?.description || ''
+      question: challenge.questions[currentRound - 1]
     };
 
+    // Save the response
     await this.saveResponse(challengeResponse);
+
+    // Update the current round in the challenge
+    await this.updateDocument(this.COLLECTION, challengeId, {
+      currentRound: currentRound + 1,
+      updatedAt: new Date()
+    });
+
     return challengeResponse;
   }
 }
