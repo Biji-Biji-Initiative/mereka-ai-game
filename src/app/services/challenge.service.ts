@@ -3,6 +3,7 @@ import { Firestore } from '@angular/fire/firestore';
 import { BaseService } from './base.service';
 import { UserService } from './user.service';
 import { RoundChallenge, RoundData, ChallengeResponse } from '../models/challenge.model';
+import { RoundGeneratorService, GeneratedRound, GeneratedChallenge } from './round-generator.service';
 
 export interface FocusData {
   focusArea: string;
@@ -31,7 +32,8 @@ export class ChallengeService extends BaseService {
 
   constructor(
     protected override firestore: Firestore,
-    private userService: UserService
+    private userService: UserService,
+    private roundGeneratorService: RoundGeneratorService
   ) {
     super(firestore);
   }
@@ -146,8 +148,12 @@ export class ChallengeService extends BaseService {
 
     console.log('Creating challenge for user:', userId);
 
-    // Generate questions based on focus area
-    const questions = this.generateAllQuestions(focusData.focusArea);
+    // Generate dynamic questions using the RoundGeneratorService
+    const generatedRound = await this.roundGeneratorService.generateRound(userId, focusData.focusArea);
+    console.log('Generated round:', generatedRound);
+
+    // Extract questions from the generated round
+    const questions = generatedRound.challenges.map(challenge => challenge.question);
     const maxRounds = questions.length;
     console.log(`Generated ${maxRounds} questions for focus area: ${focusData.focusArea}`);
 
@@ -192,47 +198,6 @@ export class ChallengeService extends BaseService {
     } catch (error) {
       console.error('Error creating challenge:', error);
       throw error;
-    }
-  }
-
-  private generateAllQuestions(focusArea: string): string[] {
-    // Generate 4 different questions based on the focus area
-    switch (focusArea) {
-      case 'creative':
-        return [
-          'How would you solve a complex problem in a creative way that AI might not think of?',
-          'What unique perspective could you bring to this creative challenge?',
-          'How would you combine different ideas to create something innovative?',
-          'What unexpected approach would you take to solve this problem?'
-        ];
-      case 'analytical':
-        return [
-          'Analyze this logical problem and explain your reasoning step by step.',
-          'What patterns do you observe in this analytical challenge?',
-          'How would you break down this complex problem into manageable parts?',
-          'What data would you need to make a well-informed decision?'
-        ];
-      case 'emotional':
-        return [
-          'How would you handle this emotionally challenging situation?',
-          'What emotional intelligence skills would you apply in this scenario?',
-          'How would you balance emotional and rational considerations?',
-          'What empathetic approach would you take to resolve this situation?'
-        ];
-      case 'ethical':
-        return [
-          'What ethical considerations would you take into account in this scenario?',
-          'How would you balance competing ethical principles in this situation?',
-          'What potential ethical dilemmas might arise from this decision?',
-          'How would you ensure your solution respects all stakeholders?'
-        ];
-      default:
-        return [
-          'Please provide your response to this challenge.',
-          'How would you approach this problem?',
-          'What insights can you bring to this situation?',
-          'How would you evaluate the success of your solution?'
-        ];
     }
   }
 
