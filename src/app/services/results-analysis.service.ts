@@ -5,6 +5,7 @@ import { Observable, of, throwError, from } from 'rxjs';
 import { catchError, delay, retry, timeout, map, switchMap } from 'rxjs/operators';
 import { RoundEvaluationService, EvaluationResponse } from './round-evaluation.service';
 import { Firestore, collection, doc, getDoc, getDocs, query, where, setDoc } from '@angular/fire/firestore';
+import { Challenge, FocusData } from './challenge.service';
 
 // Final Results interface matching the structure used in the results component
 export interface FinalResults {
@@ -32,6 +33,9 @@ export interface FinalResults {
   }[];
   insights: string[];
   recommendations: string[];
+  traits?: string[];
+  attitudes?: string[];
+  focus?: FocusData;
 }
 
 // Cloud Function response interface
@@ -64,7 +68,7 @@ interface CloudFunctionResponse {
 export class ResultsAnalysisService {
   private readonly CLOUD_FUNCTION_URL = `${environment.apiUrl}/processRequest`;
   private readonly MAX_RETRIES = 3;
-  private readonly TIMEOUT_MS = 30000; // 30 seconds timeout
+  private readonly TIMEOUT_MS = 50000; // 30 seconds timeout
   private readonly RESULTS_COLLECTION = 'final_results';
 
   constructor(
@@ -74,16 +78,23 @@ export class ResultsAnalysisService {
   ) { }
 
   analyzeResults(userId: string, challengeId: string): Observable<FinalResults> {
+    console.log('analyzeResults called with userId:', userId, 'challengeId:', challengeId);
+
     // First check if we already have a cached result
     return from(this.getCachedResults(userId, challengeId)).pipe(
       switchMap(cachedResult => {
         if (cachedResult) {
+          console.log('Using cached results:', cachedResult);
           return of(cachedResult);
         }
 
+        console.log('No cached results found, fetching round evaluations');
         // If no cached result, fetch all round evaluations and generate a new analysis
         return from(this.fetchRoundEvaluations(userId, challengeId)).pipe(
-          switchMap(evaluations => from(this.generateFinalReport(userId, challengeId, evaluations)))
+          switchMap(evaluations => {
+            console.log('Fetched round evaluations:', evaluations);
+            return from(this.generateFinalReport(userId, challengeId, evaluations));
+          })
         );
       })
     );
@@ -112,31 +123,61 @@ export class ResultsAnalysisService {
   }
 
   private async fetchRoundEvaluations(userId: string, challengeId: string): Promise<EvaluationResponse[]> {
-    const evaluations: EvaluationResponse[] = [];
+    try {
+      // Get the challenge document which contains the evaluation data
+      const challengeRef = doc(this.firestore, `challenges/${challengeId}`);
+      const challengeDoc = await getDoc(challengeRef);
 
-    // Fetch evaluations for rounds 1-3
-    for (let roundNumber = 1;roundNumber <= 3;roundNumber++) {
-      try {
-        // Get the round evaluation from Firestore
-        const roundRef = doc(this.firestore, `challenges/${challengeId}/rounds/${roundNumber}/evaluations/${userId}`);
-        const roundDoc = await getDoc(roundRef);
-
-        if (roundDoc.exists()) {
-          const evaluationData = roundDoc.data() as EvaluationResponse;
-          evaluations.push(evaluationData);
-        } else {
-          console.warn(`No evaluation found for round ${roundNumber}`);
-          // Add a default evaluation if none exists
-          evaluations.push(this.createDefaultEvaluation(userId, challengeId, roundNumber));
-        }
-      } catch (error) {
-        console.error(`Error fetching evaluation for round ${roundNumber}:`, error);
-        // Add a default evaluation on error
-        evaluations.push(this.createDefaultEvaluation(userId, challengeId, roundNumber));
+      if (!challengeDoc.exists()) {
+        console.warn('Challenge document not found');
+        return [this.createDefaultEvaluation(userId, challengeId, 1)];
       }
-    }
 
-    return evaluations;
+      const challengeData = challengeDoc.data() as Challenge;
+      const rounds = challengeData.rounds || [];
+
+      // Map each round's evaluation data to EvaluationResponse
+      const evaluations: EvaluationResponse[] = rounds.map(round => {
+        const evaluation = round.evaluation || {};
+        return {
+          metrics: {
+            creativity: evaluation['creativity'] || 5,
+            practicality: evaluation['practicality'] || 5,
+            depth: evaluation['depth'] || 5,
+            humanEdge: evaluation['humanEdge'] || 5,
+            overall: evaluation['overall'] || 5
+          },
+          feedback: Array.isArray(evaluation['feedback']) ? evaluation['feedback'] : [],
+          strengths: Array.isArray(evaluation['strengths']) ? evaluation['strengths'] : [],
+          improvements: Array.isArray(evaluation['improvements']) ? evaluation['improvements'] : [],
+          comparison: {
+            userScore: evaluation['userScore'] || 5,
+            rivalScore: evaluation['rivalScore'] || 10,
+            advantage: evaluation['advantage'] || 'rival',
+            advantageReason: evaluation['advantageReason'] || ''
+          },
+          badges: Array.isArray(evaluation['badges']) ? evaluation['badges'] : ['Participant']
+        };
+      });
+
+      // If no evaluations found, return default ones
+      if (evaluations.length === 0) {
+        return [
+          this.createDefaultEvaluation(userId, challengeId, 1),
+          this.createDefaultEvaluation(userId, challengeId, 2),
+          this.createDefaultEvaluation(userId, challengeId, 3)
+        ];
+      }
+
+      return evaluations;
+    } catch (error) {
+      console.error('Error fetching challenge evaluation:', error);
+      return [
+        this.createDefaultEvaluation(userId, challengeId, 1),
+        this.createDefaultEvaluation(userId, challengeId, 2),
+        this.createDefaultEvaluation(userId, challengeId, 3)
+      ];
+    }
   }
 
   private async generateFinalReport(
@@ -145,14 +186,51 @@ export class ResultsAnalysisService {
     evaluations: EvaluationResponse[]
   ): Promise<FinalResults> {
     try {
+      // Get the challenge data to include focus area
+      const challengeRef = doc(this.firestore, `challenges/${challengeId}`);
+      const challengeDoc = await getDoc(challengeRef);
+      const challengeData = challengeDoc.exists() ? (challengeDoc.data() as Challenge) : null;
+
+      // Get user traits and attitudes
+      const userRef = doc(this.firestore, `users/${userId}`);
+      const userDoc = await getDoc(userRef);
+      const userData = userDoc.exists() ? userDoc.data() : null;
+
       // Create a structured request for the cloud function
-      const request = this.createAnalysisRequest(userId, challengeId, evaluations);
+      const request = this.createAnalysisRequest(userId, challengeId, evaluations, challengeData, userData);
+      console.log('Request to cloud function:', JSON.stringify(request, null, 2));
 
       // Call the cloud function with retry logic and timeout
       const response = await this.callCloudFunctionWithRetry(request);
+      console.log('Response from cloud function:', JSON.stringify(response, null, 2));
 
-      // Parse the response
-      const finalResults = JSON.parse(response.data.choices[0].message.content) as FinalResults;
+      // Parse the response and add additional data
+      console.log('Response content to parse:', response.data.choices[0].message.content);
+
+      let finalResults: FinalResults;
+      try {
+        // Try to parse the response as JSON
+        finalResults = JSON.parse(response.data.choices[0].message.content) as FinalResults;
+        console.log('Parsed final results:', JSON.stringify(finalResults, null, 2));
+      } catch (parseError) {
+        console.error('Error parsing AI response:', parseError);
+        // If parsing fails, create default results
+        finalResults = this.createDefaultFinalResults(evaluations);
+      }
+
+      // Ensure the structure matches what the HTML template expects
+      finalResults = this.ensureValidResultsStructure(finalResults, evaluations);
+
+      // Add focus area from challenge if available
+      if (challengeData?.focus) {
+        finalResults.focus = challengeData.focus;
+      }
+
+      // Add traits and attitudes from user data if available
+      if (userData) {
+        finalResults.traits = userData['traits'] || [];
+        finalResults.attitudes = userData['attitudes'] || [];
+      }
 
       // Cache the results in Firestore
       await this.cacheResults(userId, challengeId, finalResults);
@@ -170,6 +248,9 @@ export class ResultsAnalysisService {
 
     while (retryCount < this.MAX_RETRIES) {
       try {
+        console.log(`Attempt ${retryCount + 1} to call cloud function`);
+        console.log('Cloud function URL:', this.CLOUD_FUNCTION_URL);
+
         // Use Observable with timeout and retry
         const response = await this.http.post<CloudFunctionResponse>(
           this.CLOUD_FUNCTION_URL,
@@ -186,7 +267,10 @@ export class ResultsAnalysisService {
           )
           .toPromise();
 
+        console.log('Raw response from cloud function:', response);
+
         if (!response || !response.success) {
+          console.error('Invalid response from cloud function:', response);
           throw new Error('No valid response from analysis service');
         }
 
@@ -211,67 +295,70 @@ export class ResultsAnalysisService {
   private createAnalysisRequest(
     userId: string,
     challengeId: string,
-    evaluations: EvaluationResponse[]
+    evaluations: EvaluationResponse[],
+    challengeData: Challenge | null,
+    userData: any
   ): any {
-    // Create the system message
     const systemMessage = {
       role: 'system',
       content: `You are an AI analyst that evaluates a user's performance across multiple rounds of a challenge.
+      Focus on analyzing the following aspects:
+      1. Overall performance and progression across rounds
+      2. Strengths and areas for improvement
+      3. Comparison with AI responses
+      4. Integration with user's traits and attitudes
+      5. Alignment with challenge focus area
 
-      IMPORTANT INSTRUCTIONS:
-      1. Analyze the user's performance across all rounds based on the provided evaluations.
-      2. Your response MUST be a JSON object with the following structure:
-         {
-           "overallScore": number (0-100),
-           "focusArea": {
-             "name": string,
-             "description": string
-           },
-           "rounds": {
-             "round1": {
-               "score": number (0-100),
-               "strengths": string[],
-               "areas": string[],
-               "comparison": {
-                 "humanScore": number (0-100),
-                 "aiScore": number (0-100),
-                 "difference": number
-               }
-             },
-             "round2": { ... same structure as round1 ... },
-             "round3": { ... same structure as round1 ... }
-           },
-           "badges": [
-             {
-               "name": string,
-               "icon": string (emoji),
-               "description": string
-             }
-           ],
-           "insights": string[],
-           "recommendations": string[]
-         }
-      3. Calculate the overall score based on the average of all round scores.
-      4. Identify a focus area where the user needs the most improvement.
-      5. For each round, extract strengths and areas for improvement from the evaluations.
-      6. Calculate the comparison between human and AI scores for each round.
-      7. Award badges based on the user's performance across all rounds.
-      8. Provide 3-5 key insights about the user's performance.
-      9. Provide 3-5 actionable recommendations for improvement.`
+      Your response MUST be valid JSON matching the following structure EXACTLY:
+      {
+        "overallScore": number,
+        "focusArea": {
+          "name": string,
+          "description": string
+        },
+        "rounds": {
+          "round1": {
+            "score": number,
+            "strengths": string[],
+            "areas": string[],
+            "comparison": {
+              "humanScore": number,
+              "aiScore": number,
+              "difference": number
+            }
+          },
+          "round2": { ... same structure as round1 ... },
+          "round3": { ... same structure as round1 ... }
+        },
+        "badges": [
+          {
+            "name": string,
+            "icon": string,
+            "description": string
+          }
+        ],
+        "insights": string[],
+        "recommendations": string[]
+      }
+
+      Do not include any text outside of this JSON structure.`
     };
 
-    // Create the user message with the evaluations
     const userMessage = {
       role: 'user',
-      content: `Analyze the following evaluations for a user (${userId}) in challenge (${challengeId}):
-        ${JSON.stringify(evaluations, null, 2)}`
+      content: `Analyze the following data:
+      User ID: ${userId}
+      Challenge ID: ${challengeId}
+      Challenge Data: ${JSON.stringify(challengeData)}
+      User Data: ${JSON.stringify(userData)}
+      Evaluations: ${JSON.stringify(evaluations)}`
     };
 
-    // Return the complete OpenAI API request
     return {
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [systemMessage, userMessage],
-      temperature: 0.4
+      temperature: 0.7,
+      max_tokens: 10000
     };
   }
 
@@ -400,5 +487,140 @@ export class ResultsAnalysisService {
         'Focus on the areas identified for improvement in future challenges.'
       ]
     };
+  }
+
+  // New method to ensure the results structure is valid
+  private ensureValidResultsStructure(results: FinalResults, evaluations: EvaluationResponse[]): FinalResults {
+    // Ensure overallScore is a number
+    if (typeof results.overallScore !== 'number') {
+      results.overallScore = 50; // Default score
+    }
+
+    // Ensure focusArea exists with name and description
+    if (!results.focusArea || typeof results.focusArea !== 'object') {
+      results.focusArea = {
+        name: 'General Improvement',
+        description: 'Focus on developing a balanced approach to all aspects of your responses.'
+      };
+    } else {
+      if (typeof results.focusArea.name !== 'string') {
+        results.focusArea.name = 'General Improvement';
+      }
+      if (typeof results.focusArea.description !== 'string') {
+        results.focusArea.description = 'Focus on developing a balanced approach to all aspects of your responses.';
+      }
+    }
+
+    // Ensure rounds exist and have the correct structure
+    if (!results.rounds || typeof results.rounds !== 'object') {
+      results.rounds = {};
+    }
+
+    // Process each round
+    evaluations.forEach((evaluation, index) => {
+      const roundKey = `round${index + 1}`;
+
+      // Ensure the round exists
+      if (!results.rounds[roundKey]) {
+        results.rounds[roundKey] = {
+          score: evaluation.metrics.overall,
+          strengths: evaluation.strengths || [],
+          areas: evaluation.improvements || [],
+          comparison: {
+            humanScore: evaluation.comparison.userScore,
+            aiScore: evaluation.comparison.rivalScore,
+            difference: evaluation.comparison.userScore - evaluation.comparison.rivalScore
+          }
+        };
+      } else {
+        // Ensure score is a number
+        if (typeof results.rounds[roundKey].score !== 'number') {
+          results.rounds[roundKey].score = evaluation.metrics.overall;
+        }
+
+        // Ensure strengths is an array
+        if (!Array.isArray(results.rounds[roundKey].strengths)) {
+          results.rounds[roundKey].strengths = evaluation.strengths || [];
+        }
+
+        // Ensure areas is an array
+        if (!Array.isArray(results.rounds[roundKey].areas)) {
+          results.rounds[roundKey].areas = evaluation.improvements || [];
+        }
+
+        // Ensure comparison exists with the correct structure
+        if (!results.rounds[roundKey].comparison || typeof results.rounds[roundKey].comparison !== 'object') {
+          results.rounds[roundKey].comparison = {
+            humanScore: evaluation.comparison.userScore,
+            aiScore: evaluation.comparison.rivalScore,
+            difference: evaluation.comparison.userScore - evaluation.comparison.rivalScore
+          };
+        } else {
+          // Ensure humanScore is a number
+          if (typeof results.rounds[roundKey].comparison.humanScore !== 'number') {
+            results.rounds[roundKey].comparison.humanScore = evaluation.comparison.userScore;
+          }
+
+          // Ensure aiScore is a number
+          if (typeof results.rounds[roundKey].comparison.aiScore !== 'number') {
+            results.rounds[roundKey].comparison.aiScore = evaluation.comparison.rivalScore;
+          }
+
+          // Ensure difference is a number
+          if (typeof results.rounds[roundKey].comparison.difference !== 'number') {
+            results.rounds[roundKey].comparison.difference =
+              results.rounds[roundKey].comparison.humanScore - results.rounds[roundKey].comparison.aiScore;
+          }
+        }
+      }
+    });
+
+    // Ensure badges is an array
+    if (!Array.isArray(results.badges)) {
+      results.badges = [
+        {
+          name: 'Participant',
+          icon: '🏆',
+          description: 'You completed the challenge!'
+        }
+      ];
+    } else {
+      // Ensure each badge has the correct structure
+      results.badges = results.badges.map(badge => {
+        if (typeof badge !== 'object') {
+          return {
+            name: 'Participant',
+            icon: '🏆',
+            description: 'You completed the challenge!'
+          };
+        }
+
+        return {
+          name: typeof badge.name === 'string' ? badge.name : 'Participant',
+          icon: typeof badge.icon === 'string' ? badge.icon : '🏆',
+          description: typeof badge.description === 'string' ? badge.description : 'You completed the challenge!'
+        };
+      });
+    }
+
+    // Ensure insights is an array
+    if (!Array.isArray(results.insights)) {
+      results.insights = [
+        'Your performance shows potential for growth.',
+        'Consistency across rounds is important for improvement.',
+        'Consider the feedback from each round to enhance your approach.'
+      ];
+    }
+
+    // Ensure recommendations is an array
+    if (!Array.isArray(results.recommendations)) {
+      results.recommendations = [
+        'Practice responding to similar challenges to build your skills.',
+        'Take time to reflect on your performance after each round.',
+        'Focus on the areas identified for improvement in future challenges.'
+      ];
+    }
+
+    return results;
   }
 }
