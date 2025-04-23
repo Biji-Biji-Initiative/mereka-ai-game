@@ -1,6 +1,6 @@
 export const environment = {
   production: true,
-  apiUrl: 'http://localhost:3000/api',
+  apiUrl: 'https://us-central1-mereka-ai-game.cloudfunctions.net',
   firebase: {
     apiKey: "AIzaSyD7esOuznHY_x0r1XsalWSZBoOJTspuABA",
     authDomain: "mereka-ai-game.firebaseapp.com",
