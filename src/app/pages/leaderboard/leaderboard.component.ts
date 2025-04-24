@@ -1,25 +1,19 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-
-interface LeaderboardEntry {
-    rank: number;
-    name: string;
-    score: number;
-    challenges: number;
-    badges: string[];
-}
+import { FormsModule } from '@angular/forms';
+import { LeaderboardService, LeaderboardEntry } from '../../services/leaderboard.service';
 
 @Component({
-    selector: 'app-leaderboard',
-    standalone: true,
-    imports: [CommonModule, RouterModule],
-    template: `
+  selector: 'app-leaderboard',
+  standalone: true,
+  imports: [CommonModule, RouterModule, FormsModule],
+  template: `
     <div class="container mx-auto px-4 py-8">
       <div class="flex justify-between items-center mb-8">
         <h1 class="text-3xl font-bold text-gray-900">Leaderboard</h1>
         <div class="flex space-x-4">
-          <select class="border rounded-md px-3 py-2">
+          <select [(ngModel)]="selectedTimeFrame" (change)="loadLeaderboard()" class="border rounded-md px-3 py-2">
             <option value="all">All Time</option>
             <option value="month">This Month</option>
             <option value="week">This Week</option>
@@ -28,7 +22,18 @@ interface LeaderboardEntry {
         </div>
       </div>
 
-      <div class="bg-white rounded-lg shadow overflow-hidden">
+      <!-- Loading State -->
+      <div *ngIf="loading" class="flex justify-center items-center py-12">
+        <div class="text-gray-600">Loading leaderboard data...</div>
+      </div>
+
+      <!-- Error State -->
+      <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+        <div class="text-red-600">Failed to load leaderboard data. Please try again later.</div>
+      </div>
+
+      <!-- Leaderboard Table -->
+      <div *ngIf="!loading && !error" class="bg-white rounded-lg shadow overflow-hidden">
         <table class="min-w-full divide-y divide-gray-200">
           <thead class="bg-gray-50">
             <tr>
@@ -43,6 +48,9 @@ interface LeaderboardEntry {
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Challenges
+              </th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Focus Area
               </th>
               <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Badges
@@ -67,10 +75,13 @@ interface LeaderboardEntry {
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-900">{{ entry.score }}</div>
+                <div class="text-sm text-gray-900">{{ entry.score }}%</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm text-gray-900">{{ entry.challenges }}</div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="text-sm text-gray-900">{{ entry.focusArea }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex space-x-1">
@@ -88,22 +99,28 @@ interface LeaderboardEntry {
   `
 })
 export class LeaderboardComponent implements OnInit {
-    leaderboardData: LeaderboardEntry[] = [
-        { rank: 1, name: 'John Doe', score: 9850, challenges: 42, badges: ['Speed Demon', 'Perfect Score'] },
-        { rank: 2, name: 'Jane Smith', score: 9720, challenges: 38, badges: ['Innovator', 'Quick Thinker'] },
-        { rank: 3, name: 'Mike Johnson', score: 9650, challenges: 40, badges: ['Precision', 'Problem Solver'] },
-        { rank: 4, name: 'Sarah Wilson', score: 9580, challenges: 35, badges: ['Ethics Master', 'Team Player'] },
-        { rank: 5, name: 'Alex Brown', score: 9450, challenges: 36, badges: ['Empathy', 'Communication'] },
-        { rank: 6, name: 'Emily Davis', score: 9320, challenges: 33, badges: ['Strategy', 'Adaptability'] },
-        { rank: 7, name: 'David Lee', score: 9250, challenges: 31, badges: ['Innovation', 'Creativity'] },
-        { rank: 8, name: 'Lisa Chen', score: 9180, challenges: 30, badges: ['Logic', 'Analysis'] },
-        { rank: 9, name: 'Tom Wilson', score: 9050, challenges: 28, badges: ['Ethics', 'Judgment'] },
-        { rank: 10, name: 'Amy Taylor', score: 8920, challenges: 27, badges: ['Empathy', 'Understanding'] }
-    ];
+  leaderboardData: LeaderboardEntry[] = [];
+  loading = true;
+  error = false;
+  selectedTimeFrame: 'all' | 'month' | 'week' | 'day' = 'all';
 
-    constructor() { }
+  constructor(private leaderboardService: LeaderboardService) { }
 
-    ngOnInit(): void {
-        // In a real app, this would fetch data from a service
+  ngOnInit(): void {
+    this.loadLeaderboard();
+  }
+
+  async loadLeaderboard(): Promise<void> {
+    this.loading = true;
+    this.error = false;
+
+    try {
+      this.leaderboardData = await this.leaderboardService.getLeaderboard(this.selectedTimeFrame);
+    } catch (error) {
+      console.error('Error loading leaderboard:', error);
+      this.error = true;
+    } finally {
+      this.loading = false;
     }
+  }
 }
