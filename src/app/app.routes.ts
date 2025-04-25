@@ -21,6 +21,7 @@ import { RouteGuard } from './guards/route.guard';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
+  { path: 'welcome', component: WelcomeComponent },
   {
     path: 'auth',
     children: [
@@ -102,5 +103,5 @@ export const routes: Routes = [
     path: 'challenges',
     component: ChallengesComponent,
     canActivate: [RouteGuard]
-  }
+  },
 ];
