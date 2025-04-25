@@ -15,6 +15,7 @@ import { LoadingService } from '../../services/loading.service';
 })
 export class FocusComponent {
   selectedFocusArea: FocusArea | null = null;
+  isLoading = false;
   focusAreas: FocusArea[] = [
     {
       id: 'creative',
@@ -67,6 +68,7 @@ export class FocusComponent {
       return;
     }
 
+    this.isLoading = true;
     this.loadingService.show();
     console.log('Creating challenge for focus area:', this.selectedFocusArea.id);
 
@@ -87,6 +89,7 @@ export class FocusComponent {
       console.error('Error creating challenge:', error);
       // Handle error appropriately
     } finally {
+      this.isLoading = false;
       this.loadingService.hide();
     }
   }
