@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FocusArea } from '../../models/focus.interface';
@@ -13,9 +13,8 @@ import { LoadingService } from '../../services/loading.service';
   templateUrl: './focus.component.html',
   styleUrl: './focus.component.scss'
 })
-export class FocusComponent {
+export class FocusComponent implements OnInit {
   selectedFocusArea: FocusArea | null = null;
-  isLoading = false;
   focusAreas: FocusArea[] = [
     {
       id: 'creative',
@@ -59,25 +58,27 @@ export class FocusComponent {
     private loadingService: LoadingService
   ) { }
 
+  ngOnInit(): void {
+    // Set default focus area
+    this.selectedFocusArea = this.focusAreas[0];
+  }
+
   selectFocusArea(focusArea: FocusArea) {
     this.selectedFocusArea = focusArea;
   }
 
-  async onContinue() {
-    if (!this.selectedFocusArea) {
-      return;
-    }
-
-    this.isLoading = true;
-    this.loadingService.show();
-    console.log('Creating challenge for focus area:', this.selectedFocusArea.id);
-
-    const focusData: FocusData = {
-      focusArea: this.selectedFocusArea.id,
-      description: this.selectedFocusArea.description
-    };
+  async onContinue(): Promise<void> {
+    if (!this.selectedFocusArea) return;
 
     try {
+      this.loadingService.show();
+      console.log('Creating challenge for focus area:', this.selectedFocusArea.id);
+
+      const focusData: FocusData = {
+        focusArea: this.selectedFocusArea.id,
+        description: this.selectedFocusArea.description
+      };
+
       const challengeId = await this.challengeService.createChallenge(focusData);
       console.log('Challenge created with ID:', challengeId);
       localStorage.setItem('currentChallengeId', challengeId);
@@ -87,9 +88,8 @@ export class FocusComponent {
       this.router.navigate(['/round', 1]);
     } catch (error) {
       console.error('Error creating challenge:', error);
-      // Handle error appropriately
+      alert('Failed to start game. Please try again.');
     } finally {
-      this.isLoading = false;
       this.loadingService.hide();
     }
   }
