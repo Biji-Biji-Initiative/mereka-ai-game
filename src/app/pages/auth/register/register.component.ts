@@ -4,10 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
 @Component({
-    selector: 'app-register',
-    standalone: true,
-    imports: [CommonModule, FormsModule, RouterModule],
-    template: `
+  selector: 'app-register',
+  standalone: true,
+  imports: [CommonModule, FormsModule, RouterModule],
+  template: `
     <div class="min-h-screen flex items-center justify-center bg-gray-50">
       <div class="max-w-md w-full space-y-8 p-8 bg-white rounded-xl shadow-lg">
         <div class="text-center">
@@ -120,7 +120,7 @@ import { RouterModule } from '@angular/router';
             </div>
           </div>
 
-          <div class="mt-6 grid grid-cols-2 gap-3">
+          <div class="mt-6 grid grid-cols-1 gap-3">
             <button
               type="button"
               class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
@@ -128,14 +128,6 @@ import { RouterModule } from '@angular/router';
             >
               <img src="assets/google-icon.svg" class="h-5 w-5 mr-2" alt="Google logo">
               Google
-            </button>
-            <button
-              type="button"
-              class="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-              (click)="registerWithGithub()"
-            >
-              <img src="assets/github-icon.svg" class="h-5 w-5 mr-2" alt="GitHub logo">
-              GitHub
             </button>
           </div>
         </div>
@@ -151,41 +143,36 @@ import { RouterModule } from '@angular/router';
   `
 })
 export class RegisterComponent {
-    name = '';
-    email = '';
-    password = '';
-    confirmPassword = '';
-    acceptTerms = false;
+  name = '';
+  email = '';
+  password = '';
+  confirmPassword = '';
+  acceptTerms = false;
 
-    isFormValid(): boolean {
-        return (
-            this.name.trim() !== '' &&
-            this.email.trim() !== '' &&
-            this.password.length >= 8 &&
-            this.password === this.confirmPassword &&
-            this.acceptTerms
-        );
-    }
+  isFormValid(): boolean {
+    return (
+      this.name.trim() !== '' &&
+      this.email.trim() !== '' &&
+      this.password.length >= 8 &&
+      this.password === this.confirmPassword &&
+      this.acceptTerms
+    );
+  }
 
-    onSubmit() {
-        if (this.isFormValid()) {
-            // Handle form submission
-            console.log('Register submitted', {
-                name: this.name,
-                email: this.email,
-                password: this.password,
-                acceptTerms: this.acceptTerms
-            });
-        }
+  onSubmit() {
+    if (this.isFormValid()) {
+      // Handle form submission
+      console.log('Register submitted', {
+        name: this.name,
+        email: this.email,
+        password: this.password,
+        acceptTerms: this.acceptTerms
+      });
     }
+  }
 
-    registerWithGoogle() {
-        // Handle Google registration
-        console.log('Register with Google clicked');
-    }
-
-    registerWithGithub() {
-        // Handle GitHub registration
-        console.log('Register with GitHub clicked');
-    }
+  registerWithGoogle() {
+    // Handle Google registration
+    console.log('Register with Google clicked');
+  }
 }
