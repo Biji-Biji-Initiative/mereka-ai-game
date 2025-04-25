@@ -8,8 +8,8 @@
         </a>
       </div>
 
-      <!-- Navigation Links -->
-      <div class="hidden md:flex items-center space-x-6">
+      <!-- Navigation Links - Only show if user has started a match or is authenticated -->
+      <div *ngIf="shouldShowNavLinks()" class="hidden md:flex items-center space-x-6">
         <a routerLink="/dashboard" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
           Dashboard
         </a>
@@ -29,8 +29,8 @@
 
       <!-- Actions -->
       <div class="flex items-center space-x-4">
-        <!-- Reset Game Button -->
-        <button (click)="resetGame()"
+        <!-- Reset Game Button - Only show if user has started a match -->
+        <button *ngIf="hasStartedGame" (click)="resetGame()"
           class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-md">
           Reset Game
         </button>
@@ -48,17 +48,46 @@
             Login
           </button>
         </ng-container>
-        <ng-container *ngIf="isAuthenticated">
-          <a routerLink="/profile" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-            Profile
-          </a>
-          <a routerLink="/settings" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-            Settings
-          </a>
-          <button (click)="logout()" class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
-            Logout
+
+        <!-- User Profile Dropdown - Only show if authenticated -->
+        <div *ngIf="isAuthenticated" class="relative">
+          <button (click)="toggleUserDropdown()" class="flex items-center space-x-2 focus:outline-none">
+            <!-- Avatar -->
+            <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+              {{ userName }}
+            </div>
+            <!-- User Name -->
+            <span class="text-gray-700 dark:text-gray-300 hidden md:block">{{ userName }}</span>
+            <!-- Dropdown Arrow -->
+            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+            </svg>
           </button>
-        </ng-container>
+
+          <!-- Dropdown Menu -->
+          <div *ngIf="showUserDropdown"
+            class="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-1 z-10 border border-gray-200 dark:border-gray-700">
+            <!-- User Info -->
+            <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+              <p class="text-sm font-medium text-gray-900 dark:text-white">{{ userName }}</p>
+              <p class="text-xs text-gray-500 dark:text-gray-400 truncate">{{ userEmail }}</p>
+            </div>
+
+            <!-- Menu Items -->
+            <a routerLink="/profile" (click)="showUserDropdown = false"
+              class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+              Profile
+            </a>
+            <a routerLink="/settings" (click)="showUserDropdown = false"
+              class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+              Settings
+            </a>
+            <button (click)="logout()"
+              class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+              Logout
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   </nav>

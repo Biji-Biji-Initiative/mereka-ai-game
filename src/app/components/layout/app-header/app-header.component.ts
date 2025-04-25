@@ -17,6 +17,9 @@ export class AppHeaderComponent implements OnInit {
   showAuthPopup = false;
   authMode: AuthMode = 'login';
   hasStartedGame = false;
+  showUserDropdown = false;
+  userName = '';
+  userEmail = '';
 
   constructor(
     private router: Router,
@@ -27,6 +30,9 @@ export class AppHeaderComponent implements OnInit {
   ngOnInit() {
     this.authService.isAuthenticated$.subscribe(isAuth => {
       this.isAuthenticated = isAuth;
+      if (isAuth) {
+        this.loadUserInfo();
+      }
     });
 
     // Check if user has started the game
@@ -34,8 +40,22 @@ export class AppHeaderComponent implements OnInit {
     this.hasStartedGame = !!userId;
   }
 
+  async loadUserInfo() {
+    const user = this.authService.getCurrentUser();
+    if (user) {
+      this.userEmail = user.email || '';
+      this.userName = user.displayName || this.getInitialsFromEmail(this.userEmail);
+    }
+  }
+
+  getInitialsFromEmail(email: string): string {
+    if (!email) return 'U';
+    return email.substring(0, 2).toUpperCase();
+  }
+
   logout() {
     this.authService.logout();
+    this.showUserDropdown = false;
   }
 
   resetGame() {
@@ -53,5 +73,14 @@ export class AppHeaderComponent implements OnInit {
 
   closeAuthPopup() {
     this.showAuthPopup = false;
+  }
+
+  toggleUserDropdown() {
+    this.showUserDropdown = !this.showUserDropdown;
+  }
+
+  // Helper method to check if navigation links should be shown
+  shouldShowNavLinks(): boolean {
+    return this.hasStartedGame || this.isAuthenticated;
   }
 }
