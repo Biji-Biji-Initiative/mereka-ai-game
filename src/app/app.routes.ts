@@ -8,9 +8,6 @@ import { DynamicRoundComponent } from './components/rounds/dynamic-round.compone
 import { ResultsComponent } from './pages/results/results.component';
 import { ShareComponent } from './pages/share/share.component';
 import { DashboardComponent } from './pages/dashboard/dashboard.component';
-import { LoginComponent } from './pages/auth/login/login.component';
-import { RegisterComponent } from './pages/auth/register/register.component';
-import { ForgotPasswordComponent } from './pages/auth/forgot-password/forgot-password.component';
 import { ProfileComponent } from './pages/profile/profile.component';
 import { SettingsComponent } from './pages/settings/settings.component';
 import { HelpComponent } from './pages/help/help.component';
@@ -22,14 +19,6 @@ import { RouteGuard } from './guards/route.guard';
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
   { path: 'welcome', component: WelcomeComponent },
-  {
-    path: 'auth',
-    children: [
-      { path: 'login', component: LoginComponent },
-      { path: 'register', component: RegisterComponent },
-      { path: 'forgot-password', component: ForgotPasswordComponent }
-    ]
-  },
   {
     path: 'context',
     component: ContextComponent,

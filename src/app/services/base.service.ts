@@ -45,4 +45,10 @@ export class BaseService {
         const querySnapshot = await getDocs(q);
         return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     }
+
+    protected async queryCollection(collection: string, field: string, operator: string, value: any): Promise<any[]> {
+        // This would be replaced with actual Firebase implementation
+        console.log(`Querying ${collection} where ${field} ${operator} ${value}`);
+        return []; // Return empty array for now
+    }
 }
