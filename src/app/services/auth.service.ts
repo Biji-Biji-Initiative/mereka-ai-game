@@ -10,7 +10,8 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
-  User
+  User,
+  sendPasswordResetEmail
 } from '@angular/fire/auth';
 
 @Injectable({
@@ -120,6 +121,15 @@ export class AuthService {
     } catch (error: any) {
       console.error('Error signing out:', error);
       throw new Error(error.message || 'Failed to sign out');
+    }
+  }
+
+  async resetPassword(email: string): Promise<void> {
+    try {
+      await sendPasswordResetEmail(this.auth, email);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw error;
     }
   }
 }

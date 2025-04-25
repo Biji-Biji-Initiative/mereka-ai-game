@@ -1,0 +1,92 @@
+<div class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <!-- Header -->
+            <h3 class="text-lg font-medium text-gray-900">
+                {{ mode === 'login' ? 'Sign In' : mode === 'register' ? 'Create Account' : 'Reset Password' }}
+            </h3>
+            <p class="text-sm text-gray-500 mt-2">
+                {{ mode === 'login' ? 'Sign in to your account' :
+                mode === 'register' ? 'Create a new account' :
+                'Enter your email to reset your password' }}
+            </p>
+
+            <!-- Forms -->
+            <form class="mt-4 space-y-4" (ngSubmit)="onSubmit()">
+                <!-- Email -->
+                <div>
+                    <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+                    <input type="email" id="email" [(ngModel)]="email" name="email"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                        required>
+                </div>
+
+                <!-- Password (for login and register) -->
+                <div *ngIf="mode !== 'reset-password'">
+                    <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+                    <input type="password" id="password" [(ngModel)]="password" name="password"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                        required>
+                </div>
+
+                <!-- Confirm Password (for register) -->
+                <div *ngIf="mode === 'register'">
+                    <label for="confirmPassword" class="block text-sm font-medium text-gray-700">Confirm
+                        Password</label>
+                    <input type="password" id="confirmPassword" [(ngModel)]="confirmPassword" name="confirmPassword"
+                        class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary focus:ring-primary"
+                        required>
+                </div>
+
+                <!-- Error Message -->
+                <div *ngIf="error" class="text-red-600 text-sm">{{ error }}</div>
+
+                <!-- Action Buttons -->
+                <div class="flex flex-col space-y-3">
+                    <!-- Submit Button -->
+                    <button type="submit" [disabled]="isProcessing"
+                        class="w-full px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark disabled:opacity-50">
+                        {{ isProcessing ? 'Processing...' :
+                        mode === 'login' ? 'Sign in' :
+                        mode === 'register' ? 'Create Account' :
+                        'Reset Password' }}
+                    </button>
+
+                    <!-- Google Sign In (for login and register) -->
+                    <button *ngIf="mode !== 'reset-password'" type="button" (click)="loginWithGoogle()"
+                        class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 flex items-center justify-center">
+                        <img src="assets/google-icon.svg" alt="Google" class="w-5 h-5 mr-2">
+                        Sign in with Google
+                    </button>
+                </div>
+            </form>
+
+            <!-- Mode Switcher Links -->
+            <div class="mt-4 text-sm text-center space-y-2">
+                <div *ngIf="mode === 'login'">
+                    <a (click)="setMode('register')" class="text-primary hover:text-primary-dark cursor-pointer">Create
+                        an account</a>
+                    <span class="mx-2">|</span>
+                    <a (click)="setMode('reset-password')"
+                        class="text-primary hover:text-primary-dark cursor-pointer">Forgot password?</a>
+                </div>
+                <div *ngIf="mode === 'register'">
+                    <a (click)="setMode('login')" class="text-primary hover:text-primary-dark cursor-pointer">Already
+                        have an account? Sign in</a>
+                </div>
+                <div *ngIf="mode === 'reset-password'">
+                    <a (click)="setMode('login')" class="text-primary hover:text-primary-dark cursor-pointer">Back to
+                        sign in</a>
+                </div>
+            </div>
+
+            <!-- Close Button -->
+            <button (click)="close.emit()" class="absolute top-2 right-2 text-gray-400 hover:text-gray-500">
+                <span class="sr-only">Close</span>
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>

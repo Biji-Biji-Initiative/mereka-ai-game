@@ -3,27 +3,19 @@ import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '../../../services/auth.service';
 import { UserService } from '../../../services/user.service';
-import { FormsModule } from '@angular/forms';
+import { AuthPopupComponent, AuthMode } from '../../auth/auth-popup/auth-popup.component';
 
 @Component({
   selector: 'app-app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, AuthPopupComponent],
   templateUrl: './app-header.component.html',
   styleUrl: './app-header.component.scss'
 })
 export class AppHeaderComponent implements OnInit {
   isAuthenticated = false;
-  showSaveModal = false;
-  showLoginModal = false;
-  saveEmail = '';
-  savePassword = '';
-  loginEmail = '';
-  loginPassword = '';
-  isSaving = false;
-  isLoggingIn = false;
-  saveError = '';
-  loginError = '';
+  showAuthPopup = false;
+  authMode: AuthMode = 'login';
   hasStartedGame = false;
 
   constructor(
@@ -54,72 +46,12 @@ export class AppHeaderComponent implements OnInit {
     }
   }
 
-  openLoginModal() {
-    this.showLoginModal = true;
-    this.loginError = '';
+  openAuthPopup(mode: AuthMode = 'login') {
+    this.authMode = mode;
+    this.showAuthPopup = true;
   }
 
-  closeLoginModal() {
-    this.showLoginModal = false;
-    this.loginEmail = '';
-    this.loginPassword = '';
-    this.loginError = '';
-  }
-
-  async login() {
-    if (!this.loginEmail || !this.loginPassword) {
-      this.loginError = 'Please enter both email and password';
-      return;
-    }
-
-    this.isLoggingIn = true;
-    this.loginError = '';
-
-    try {
-      await this.authService.signInWithEmail(this.loginEmail, this.loginPassword);
-      this.closeLoginModal();
-      this.router.navigate(['/dashboard']);
-    } catch (error: any) {
-      console.error('Error signing in:', error);
-      this.loginError = error.message || 'Failed to sign in. Please try again.';
-    } finally {
-      this.isLoggingIn = false;
-    }
-  }
-
-  openSaveModal() {
-    this.showSaveModal = true;
-    this.saveError = '';
-  }
-
-  closeSaveModal() {
-    this.showSaveModal = false;
-    this.saveEmail = '';
-    this.savePassword = '';
-    this.saveError = '';
-  }
-
-  async saveProgress() {
-    if (!this.saveEmail || !this.savePassword) {
-      this.saveError = 'Please enter both email and password';
-      return;
-    }
-
-    this.isSaving = true;
-    this.saveError = '';
-
-    try {
-      // Create account with email and password
-      await this.authService.createAccountWithEmail(this.saveEmail, this.savePassword);
-
-      // Close the modal and navigate to dashboard
-      this.closeSaveModal();
-      this.router.navigate(['/dashboard']);
-    } catch (error) {
-      console.error('Error saving progress:', error);
-      this.saveError = 'Failed to save progress. Please try again.';
-    } finally {
-      this.isSaving = false;
-    }
+  closeAuthPopup() {
+    this.showAuthPopup = false;
   }
 }
