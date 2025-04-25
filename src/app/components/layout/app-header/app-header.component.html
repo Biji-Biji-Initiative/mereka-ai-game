@@ -51,17 +51,11 @@
 
         <!-- User Profile Dropdown - Only show if authenticated -->
         <div *ngIf="isAuthenticated" class="relative">
-          <button (click)="toggleUserDropdown()" class="flex items-center space-x-2 focus:outline-none">
+          <button (click)="toggleUserDropdown()" class="focus:outline-none">
             <!-- Avatar -->
             <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
               {{ userName }}
             </div>
-            <!-- User Name -->
-            <span class="text-gray-700 dark:text-gray-300 hidden md:block">{{ userName }}</span>
-            <!-- Dropdown Arrow -->
-            <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-            </svg>
           </button>
 
           <!-- Dropdown Menu -->
