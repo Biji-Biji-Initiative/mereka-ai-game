@@ -1,68 +1,55 @@
-<div class="focus-container">
-  <h1 class="title">Focus Selection</h1>
-  <p class="subtitle">Your choice will determine the type of challenges you'll face</p>
+<div class="container mx-auto px-4 py-8 max-w-7xl">
+  <h1 class="text-3xl font-bold text-center mb-2">Focus Selection</h1>
+  <p class="text-gray-600 text-center mb-8">Your choice will determine the type of challenges you'll face</p>
 
-  <div class="focus-grid">
-    <!-- Creative Thinking -->
-    <div class="focus-card" [class.selected]="selectedFocusArea?.id === 'creative'"
-      (click)="selectFocusArea(focusAreas[0])">
-      <div class="focus-header">
-        <span class="focus-icon">🎨</span>
-        <h2 class="focus-title">Creative Thinking</h2>
-      </div>
-      <p class="focus-description">Test your creative problem-solving abilities against AI systems.</p>
-      <div class="challenge-focus" *ngIf="selectedFocusArea?.id === 'creative'">
-        <p><strong>Challenge Focus:</strong> Your creative thinking will be tested through specialized AI
-          challenges designed to measure human capabilities.</p>
-      </div>
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="flex flex-col items-center justify-center min-h-[400px]">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    <p class="mt-4 text-gray-600">Generating personalized focus areas...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="flex flex-col items-center justify-center min-h-[400px]">
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md w-full text-center">
+      <p class="text-red-600">{{error}}</p>
+      <button class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        (click)="generateFocusAreas()">
+        Try Again
+      </button>
     </div>
+  </div>
 
-    <!-- Analytical Reasoning -->
-    <div class="focus-card" [class.selected]="selectedFocusArea?.id === 'analytical'"
-      (click)="selectFocusArea(focusAreas[1])">
-      <div class="focus-header">
-        <span class="focus-icon">🧠</span>
-        <h2 class="focus-title">Analytical Reasoning</h2>
-      </div>
-      <p class="focus-description">Challenge your logical and analytical skills in AI-driven scenarios.</p>
-      <div class="challenge-focus" *ngIf="selectedFocusArea?.id === 'analytical'">
-        <p><strong>Challenge Focus:</strong> Your analytical reasoning will be tested through specialized AI
-          challenges designed to measure human capabilities.</p>
-      </div>
-    </div>
-
-    <!-- Emotional Intelligence -->
-    <div class="focus-card" [class.selected]="selectedFocusArea?.id === 'emotional'"
-      (click)="selectFocusArea(focusAreas[2])">
-      <div class="focus-header">
-        <span class="focus-icon">❤️</span>
-        <h2 class="focus-title">Emotional Intelligence</h2>
-      </div>
-      <p class="focus-description">Explore how your emotional intelligence compares to AI capabilities.</p>
-      <div class="challenge-focus" *ngIf="selectedFocusArea?.id === 'emotional'">
-        <p><strong>Challenge Focus:</strong> Your emotional intelligence will be tested through specialized AI
-          challenges designed to measure human capabilities.</p>
-      </div>
-    </div>
-
-    <!-- Ethical Decision Making -->
-    <div class="focus-card" [class.selected]="selectedFocusArea?.id === 'ethical'"
-      (click)="selectFocusArea(focusAreas[3])">
-      <div class="focus-header">
-        <span class="focus-icon">⚖️</span>
-        <h2 class="focus-title">Ethical Decision Making</h2>
-      </div>
-      <p class="focus-description">Navigate complex ethical dilemmas that test both human and AI judgment.</p>
-      <div class="challenge-focus" *ngIf="selectedFocusArea?.id === 'ethical'">
-        <p><strong>Challenge Focus:</strong> Your ethical decision-making will be tested through specialized AI
-          challenges designed to measure human capabilities.</p>
+  <!-- Focus Areas Grid -->
+  <div *ngIf="!isLoading && !error" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div *ngFor="let area of focusAreas"
+      [class]="selectedFocusArea?.id === area.id ? 'bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-200 hover:shadow-lg ring-2 ring-primary' : 'bg-white rounded-lg shadow-md p-6 cursor-pointer transition-all duration-200 hover:shadow-lg'"
+      (click)="selectFocusArea(area)">
+      <div class="flex flex-col space-y-4">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <span class="text-3xl">{{area.icon}}</span>
+            <h2 class="text-xl font-semibold">{{area.name}}</h2>
+          </div>
+          <div class="flex items-center space-x-2">
+            <span class="text-sm text-gray-500">Match:</span>
+            <span class="text-sm font-medium text-primary">{{area.matchLevel}}%</span>
+          </div>
+        </div>
+        <p class="text-gray-600">{{area.description}}</p>
+        <div *ngIf="selectedFocusArea?.id === area.id" class="mt-4 p-4 bg-gray-50 rounded-lg">
+          <p class="text-sm text-gray-700">
+            <span class="font-medium">Challenge Focus:</span> {{area.description}}
+          </p>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="action-button">
-    <button class="begin-button" [disabled]="!selectedFocusArea" (click)="onContinue()">
-      Begin {{ selectedFocusArea?.name || 'Creative Thinking' }}
+  <div class="mt-8 flex justify-center">
+    <button
+      class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      [disabled]="!selectedFocusArea || isLoading" (click)="onContinue()">
+      {{isLoading ? 'Loading...' : 'Begin ' + (selectedFocusArea?.name || 'Challenge')}}
     </button>
   </div>
 </div>
