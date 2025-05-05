@@ -39,7 +39,7 @@ export const routes: Routes = [
     data: { previous: 'attitudes', next: 'round/1' }
   },
   {
-    path: 'round/:round',
+    path: 'round/:challengeId/:roundNumber',
     component: DynamicRoundComponent,
     data: { title: 'Round' }
   },
