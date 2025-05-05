@@ -31,9 +31,6 @@ export class AttitudesService extends BaseService {
             userId,
             ...data
         });
-
-        // Update user's current route
-        await this.userService.updateUserRoute(userId, '/focus');
     }
 
     async getAttitudes(userId: string): Promise<AttitudesData | null> {

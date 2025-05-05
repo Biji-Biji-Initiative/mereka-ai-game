@@ -61,12 +61,6 @@ export class UserService extends BaseService {
     return userId;
   }
 
-  async updateUserRoute(userId: string, route: string): Promise<void> {
-    // Ensure route starts with a slash
-    const routeWithSlash = (route ? (route.startsWith('/') ? route : `/${route}`) : '');
-    await this.updateDocument(this.COLLECTION, userId, { currentRoute: routeWithSlash });
-  }
-
   async getUser(userId: string): Promise<User | null> {
     const user = await this.getDocument(this.COLLECTION, userId);
     return user ? { ...user, id: userId } : null;

@@ -2,8 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { FocusArea } from '../../models/focus.interface';
-import { ChallengeService, FocusData } from '../../services/challenge.service';
-import { NavigationService } from '../../services/navigation.service';
+import { ChallengeService } from '../../services/challenge.service';
 import { LoadingService } from '../../services/loading.service';
 
 @Component({
@@ -15,38 +14,24 @@ import { LoadingService } from '../../services/loading.service';
 })
 export class FocusComponent implements OnInit {
   selectedFocusArea: FocusArea | null = null;
-  focusAreas: FocusArea[] = [
+  focusAreas = [
     {
       id: 'creative',
       name: 'Creative Thinking',
       description: 'Test your creative problem-solving abilities against AI systems.',
-      matchLevel: 85,
-      icon: '🎨',
-      color: 'var(--ai-purple)'
+      matchLevel: 85
+    },
+    {
+      id: 'strategic',
+      name: 'Strategic Planning',
+      description: 'Challenge AI in strategic decision-making scenarios.',
+      matchLevel: 75
     },
     {
       id: 'analytical',
       name: 'Analytical Reasoning',
-      description: 'Challenge your logical and analytical skills in AI-driven scenarios.',
-      matchLevel: 90,
-      icon: '🧠',
-      color: 'var(--ai-blue)'
-    },
-    {
-      id: 'emotional',
-      name: 'Emotional Intelligence',
-      description: 'Explore how your emotional intelligence compares to AI capabilities.',
-      matchLevel: 75,
-      icon: '❤️',
-      color: 'var(--ai-red)'
-    },
-    {
-      id: 'ethical',
-      name: 'Ethical Decision Making',
-      description: 'Navigate complex ethical dilemmas that test both human and AI judgment.',
-      matchLevel: 80,
-      icon: '⚖️',
-      color: 'var(--ai-green)'
+      description: 'Compete with AI in complex analytical tasks.',
+      matchLevel: 80
     }
   ];
 
@@ -54,41 +39,30 @@ export class FocusComponent implements OnInit {
     private router: Router,
     private route: ActivatedRoute,
     private challengeService: ChallengeService,
-    private navigationService: NavigationService,
     private loadingService: LoadingService
   ) { }
 
-  ngOnInit(): void {
-    // Set default focus area
-    this.selectedFocusArea = this.focusAreas[0];
+  ngOnInit() {
+    // Component initialization
   }
 
-  selectFocusArea(focusArea: FocusArea) {
-    this.selectedFocusArea = focusArea;
+  selectFocusArea(area: FocusArea) {
+    this.selectedFocusArea = area;
   }
 
-  async onContinue(): Promise<void> {
+  async onContinue() {
     if (!this.selectedFocusArea) return;
 
+    this.loadingService.show();
     try {
-      this.loadingService.show();
-      console.log('Creating challenge for focus area:', this.selectedFocusArea.id);
-
-      const focusData: FocusData = {
+      const nextRoute = this.route.snapshot.data['next'];
+      await this.challengeService.createChallenge({
         focusArea: this.selectedFocusArea.id,
         description: this.selectedFocusArea.description
-      };
-
-      const challengeId = await this.challengeService.createChallenge(focusData);
-      console.log('Challenge created with ID:', challengeId);
-      localStorage.setItem('currentChallengeId', challengeId);
-
-      // Navigate to the first round
-      console.log('Navigating to round 1');
-      this.router.navigate(['/round', 1]);
+      });
+      this.router.navigate([nextRoute]);
     } catch (error) {
       console.error('Error creating challenge:', error);
-      alert('Failed to start game. Please try again.');
     } finally {
       this.loadingService.hide();
     }
@@ -96,6 +70,6 @@ export class FocusComponent implements OnInit {
 
   onBack() {
     const previousRoute = this.route.snapshot.data['previous'];
-    this.navigationService.navigateToPreviousRoute('focus', previousRoute);
+    this.router.navigate([`/${previousRoute}`]);
   }
 }

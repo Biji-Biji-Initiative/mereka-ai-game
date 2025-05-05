@@ -142,10 +142,9 @@ export class ChallengeService extends BaseService {
     const maxRounds = challenge?.questions.length || 4;
     console.log(`Max rounds: ${maxRounds}`);
 
-    // Update user's current route
+    // Determine next route
     const nextRoute = roundNumber < maxRounds ? `/round/${roundNumber + 1}` : '/results';
-    console.log(`Updating user route to: ${nextRoute}`);
-    await this.userService.updateUserRoute(userId, nextRoute);
+    console.log(`Next route: ${nextRoute}`);
   }
 
   async getRoundResponse(userId: string, roundNumber: number): Promise<ChallengeResponse | null> {
@@ -226,9 +225,6 @@ export class ChallengeService extends BaseService {
       await this.updateDocument(this.COLLECTION, challengeId, { id: challengeId });
 
       // Save the current challenge ID to the user's document
-      const route = '/round/1';
-      console.log(`Updating user route to: ${route}`);
-      await this.userService.updateUserRoute(userId, route);
       await this.updateDocument('users', userId, { currentChallengeId: challengeId });
 
       return challengeId;
@@ -335,7 +331,6 @@ export class ChallengeService extends BaseService {
     if (userId) {
       const maxRounds = challenge.questions.length;
       const nextRoute = currentRound < maxRounds ? `/round/${currentRound + 1}` : '/results';
-      await this.userService.updateUserRoute(userId, nextRoute);
     }
 
     return challengeResponse;

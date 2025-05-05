@@ -1,10 +1,11 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { ChallengeService } from '../../services/challenge.service';
-import { RoundData, ChallengeResponse } from '../../models/challenge.model';
-import { NavigationService } from '../../services/navigation.service';
+import { LoadingService } from '../../services/loading.service';
+import { UserService } from '../../services/user.service';
+import { RoundData } from '../../models/challenge.model';
 
 @Component({
   selector: 'app-dynamic-round',
@@ -15,34 +16,30 @@ import { NavigationService } from '../../services/navigation.service';
 })
 export class DynamicRoundComponent implements OnInit, OnDestroy {
   currentRound: RoundData | null = null;
-  userResponse: string = '';
-  isSubmitting: boolean = false;
-  roundNumber: number = 1;
-  evaluation: ChallengeResponse | null = null;
-  showAiThinking: boolean = false;
-  previousResponses: { [key: number]: string; } = {};
-  currentRoundNumber: number = 1;
-  isLoading: boolean = true;
-  maxRounds: number = 4; // Default value, will be updated from challenge data
-
-  // Timer properties
-  timeLeft: number = 300; // 5 minutes in seconds
-  timerInterval: any;
-  progress: number = 100;
-
-  // Define metrics for the template
-  metrics = ['creativity', 'practicality', 'depth', 'humanEdge', 'overall'];
+  userResponse = '';
+  isSubmitting = false;
+  roundNumber = 1;
+  evaluation: any = null;
+  showAiThinking = false;
+  previousResponses: { [key: string]: string; } = {};
+  currentRoundNumber = 1;
+  isLoading = true;
+  maxRounds = 4;
+  timeLeft = 300;
+  timer: any;
+  private routeSubscription: any;
 
   constructor(
     private challengeService: ChallengeService,
     private router: Router,
     private route: ActivatedRoute,
-    private navigationService: NavigationService
+    private loadingService: LoadingService,
+    private userService: UserService
   ) { }
 
   ngOnInit() {
     console.log('DynamicRoundComponent initialized');
-    this.route.params.subscribe(params => {
+    this.routeSubscription = this.route.params.subscribe(params => {
       console.log('Route params:', params);
       const roundNumber = parseInt(params['round'], 10);
       console.log('Parsed round number:', roundNumber);
@@ -63,48 +60,39 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.timerInterval) {
-      clearInterval(this.timerInterval);
+    if (this.routeSubscription) {
+      this.routeSubscription.unsubscribe();
     }
+    this.stopTimer();
   }
 
   startTimer() {
-    this.timeLeft = 300; // Reset to 5 minutes
-    this.progress = 100;
-
-    this.timerInterval = setInterval(() => {
+    this.timer = setInterval(() => {
       if (this.timeLeft > 0) {
         this.timeLeft--;
-        this.progress = (this.timeLeft / 300) * 100;
       } else {
-        clearInterval(this.timerInterval);
-        this.submitResponse(); // Auto-submit when time runs out
+        this.stopTimer();
+        this.submitResponse();
       }
     }, 1000);
   }
 
-  getFormattedTime(): string {
-    const minutes = Math.floor(this.timeLeft / 60);
-    const seconds = this.timeLeft % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  stopTimer() {
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
   }
 
   async loadCurrentRound() {
-    const challengeId = localStorage.getItem('currentChallengeId');
-    if (!challengeId) {
-      console.error('No challenge ID found');
-      this.router.navigate(['/focus']);
-      return;
-    }
-
     this.isLoading = true;
-
-    // Reset evaluation and user response when loading a new round
-    this.evaluation = null;
-    this.userResponse = '';
-    this.showAiThinking = false;
-
     try {
+      const challengeId = localStorage.getItem('currentChallengeId');
+      if (!challengeId) {
+        console.error('No challenge ID found');
+        this.router.navigate(['/focus']);
+        return;
+      }
+
       const challenge = await this.challengeService.getChallenge(challengeId);
       if (!challenge) {
         console.error('Challenge not found');
@@ -112,62 +100,70 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Set the maximum number of rounds from the number of questions in the challenge
       this.maxRounds = challenge.questions.length;
+      this.currentRound = {
+        question: challenge.questions[this.currentRoundNumber - 1],
+        roundNumber: this.currentRoundNumber,
+        answer: ''
+      };
 
-      // Initialize rounds array if it doesn't exist
-      if (!challenge.rounds || !Array.isArray(challenge.rounds)) {
-        challenge.rounds = [];
+      // Load previous responses if any
+      const userId = this.userService.getCurrentUserId();
+      if (userId) {
+        const previousResponse = await this.challengeService.getRoundResponse(
+          userId,
+          this.currentRoundNumber
+        );
+        if (previousResponse) {
+          this.userResponse = previousResponse.response;
+          this.evaluation = previousResponse.evaluation;
+        }
       }
-
-      // Get or create the round
-      let round = challenge.rounds.find(r => r.roundNumber === this.currentRoundNumber);
-      if (!round) {
-        round = {
-          roundNumber: this.currentRoundNumber,
-          question: challenge.questions[this.currentRoundNumber - 1] || 'No question available',
-          answer: ''
-        };
-        await this.challengeService.addRound(challengeId, round);
-      }
-
-      this.currentRound = round;
-
-      // Load previous responses
-      this.loadPreviousResponses(challenge);
     } catch (error) {
       console.error('Error loading round:', error);
-      this.router.navigate(['/focus']);
     } finally {
       this.isLoading = false;
     }
   }
 
-  private loadPreviousResponses(challenge: any) {
-    this.previousResponses = {};
-    challenge.rounds.forEach((round: RoundData) => {
-      if (round.roundNumber < this.currentRoundNumber && round.answer) {
-        this.previousResponses[round.roundNumber] = round.answer;
-      }
-    });
-  }
-
   async submitResponse() {
-    if (!this.currentRound || !this.userResponse) return;
+    if (this.isSubmitting) return;
 
     this.isSubmitting = true;
     this.showAiThinking = true;
+    this.stopTimer();
+
     try {
       const challengeId = localStorage.getItem('currentChallengeId');
       if (!challengeId) {
         throw new Error('No challenge ID found');
       }
 
-      // Submit response and get evaluation
-      this.evaluation = await this.challengeService.submitResponse(challengeId, this.userResponse);
+      const response = await this.challengeService.submitResponse(challengeId, this.userResponse);
+      this.evaluation = response.evaluation;
 
-      // Don't navigate immediately - let the user see the evaluation first
-      // The user will click the continue button to move to the next round
+      // Save the response
+      const userId = this.userService.getCurrentUserId();
+      if (userId) {
+        await this.challengeService.saveRoundResponse(
+          userId,
+          this.currentRoundNumber,
+          {
+            challengeId,
+            response: this.userResponse,
+            evaluation: this.evaluation,
+            question: this.currentRound?.question || '',
+            aiResponse: response.aiResponse || ''
+          }
+        );
+      }
+
+      // Navigate to next round or results
+      if (this.currentRoundNumber < this.maxRounds) {
+        this.router.navigate([`/round/${this.currentRoundNumber + 1}`]);
+      } else {
+        this.router.navigate(['/results']);
+      }
     } catch (error) {
       console.error('Error submitting response:', error);
     } finally {
@@ -176,53 +172,14 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
     }
   }
 
-  handleContinue() {
-    console.log(`Current round: ${this.currentRoundNumber}, Max rounds: ${this.maxRounds}`);
-    if (this.currentRoundNumber < this.maxRounds) {
-      console.log('Navigating to next round');
-      this.navigationService.navigateToNextRound(this.currentRoundNumber, this.maxRounds);
-    } else {
-      console.log('Navigating to results page');
-      this.router.navigate(['/results']);
-    }
-  }
-
-  // Helper methods for the template
   getMetricValue(metric: string): number {
-    if (!this.evaluation?.evaluation?.metrics) return 0;
-
-    // Use type assertion to handle the dynamic property access
-    const metrics = this.evaluation.evaluation.metrics as Record<string, number>;
-    return metrics[metric] || 0;
+    return this.evaluation?.evaluation?.metrics?.[metric] || 0;
   }
 
-  getFeedback(): string[] {
-    return this.evaluation?.evaluation?.feedback || [];
-  }
-
-  getStrengths(): string[] {
-    return this.evaluation?.evaluation?.strengths || [];
-  }
-
-  getImprovements(): string[] {
-    return this.evaluation?.evaluation?.improvements || [];
-  }
-
-  getBadges(): string[] {
-    return this.evaluation?.evaluation?.badges || [];
-  }
-
-  getComparison(): any {
-    return this.evaluation?.evaluation?.comparison || {
-      userScore: 0,
-      rivalScore: 0,
-      advantage: 'tie',
-      advantageReason: ''
-    };
-  }
-
-  // Add a method to handle navigation
-  navigateBack(): void {
-    this.router.navigate(['/focus']);
+  getMetricColor(metric: string): string {
+    const value = this.getMetricValue(metric);
+    if (value >= 80) return 'text-green-500';
+    if (value >= 60) return 'text-yellow-500';
+    return 'text-red-500';
   }
 }

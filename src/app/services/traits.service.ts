@@ -31,9 +31,6 @@ export class TraitsService extends BaseService {
             userId,
             ...data
         });
-
-        // Update user's current route
-        await this.userService.updateUserRoute(userId, '/attitudes');
     }
 
     async getTraits(userId: string): Promise<TraitsData | null> {

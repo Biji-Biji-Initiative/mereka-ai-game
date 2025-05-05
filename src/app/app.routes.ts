@@ -14,7 +14,6 @@ import { HelpComponent } from './pages/help/help.component';
 import { TournamentsComponent } from './pages/tournaments/tournaments.component';
 import { LeaderboardComponent } from './pages/leaderboard/leaderboard.component';
 import { ChallengesComponent } from './pages/challenges/challenges.component';
-import { RouteGuard } from './guards/route.guard';
 
 export const routes: Routes = [
   { path: '', component: WelcomeComponent },
@@ -27,52 +26,43 @@ export const routes: Routes = [
   {
     path: 'traits',
     component: TraitsComponent,
-    data: { next: 'attitudes' },
-    canActivate: [RouteGuard]
+    data: { next: 'attitudes' }
   },
   {
     path: 'attitudes',
     component: AttitudesComponent,
-    data: { next: 'focus' },
-    canActivate: [RouteGuard]
+    data: { next: 'focus' }
   },
   {
     path: 'focus',
     component: FocusComponent,
-    data: { previous: 'attitudes', next: 'round/1' },
-    canActivate: [RouteGuard]
+    data: { previous: 'attitudes', next: 'round/1' }
   },
   {
     path: 'round/:round',
     component: DynamicRoundComponent,
-    canActivate: [RouteGuard],
     data: { title: 'Round' }
   },
   {
     path: 'results',
     component: ResultsComponent,
-    data: { next: 'dashboard' },
-    canActivate: [RouteGuard]
+    data: { next: 'dashboard' }
   },
   {
     path: 'dashboard',
-    component: DashboardComponent,
-    canActivate: [RouteGuard]
+    component: DashboardComponent
   },
   {
     path: 'share',
-    component: ShareComponent,
-    canActivate: [RouteGuard]
+    component: ShareComponent
   },
   {
     path: 'profile',
-    component: ProfileComponent,
-    canActivate: [RouteGuard]
+    component: ProfileComponent
   },
   {
     path: 'settings',
-    component: SettingsComponent,
-    canActivate: [RouteGuard]
+    component: SettingsComponent
   },
   {
     path: 'help',
@@ -80,17 +70,14 @@ export const routes: Routes = [
   },
   {
     path: 'tournaments',
-    component: TournamentsComponent,
-    canActivate: [RouteGuard]
+    component: TournamentsComponent
   },
   {
     path: 'leaderboard',
-    component: LeaderboardComponent,
-    canActivate: [RouteGuard]
+    component: LeaderboardComponent
   },
   {
     path: 'challenges',
-    component: ChallengesComponent,
-    canActivate: [RouteGuard]
-  },
+    component: ChallengesComponent
+  }
 ];
