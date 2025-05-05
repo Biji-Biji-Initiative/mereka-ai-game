@@ -355,7 +355,7 @@ export class ResultsAnalysisService {
     };
 
     return {
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [systemMessage, userMessage],
       temperature: 0.7,
       max_tokens: 10000

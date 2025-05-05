@@ -90,7 +90,21 @@ export class FocusAreaGeneratorService {
 
       // Parse the response content
       const content = response.data.choices[0].message.content;
-      const focusAreas = JSON.parse(content);
+
+      // Clean the content to ensure it's valid JSON
+      const cleanedContent = content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      let focusAreas: FocusArea[];
+      try {
+        focusAreas = JSON.parse(cleanedContent);
+      } catch (parseError) {
+        console.error('Error parsing focus areas:', parseError);
+        console.error('Raw content:', content);
+        throw new Error('Invalid focus areas response format');
+      }
 
       if (!this.isValidFocusAreas(focusAreas)) {
         throw new Error('Invalid focus areas response structure');
@@ -127,7 +141,7 @@ export class FocusAreaGeneratorService {
          - Have a clear description of what the challenge entails
          - Include a match level (80-100) indicating how well it aligns with the user's profile
          - Include an appropriate emoji icon that represents the focus area
-      4. Your response MUST be a JSON array with the following structure:
+      4. Your response MUST be a valid JSON array with the following structure:
          [
            {
              "id": "unique-id-1",
@@ -173,7 +187,10 @@ export class FocusAreaGeneratorService {
            }
          ]
       5. Ensure each focus area is unique and challenging.
-      6. The match level should reflect how well the focus area aligns with the user's profile.`
+      6. The match level should reflect how well the focus area aligns with the user's profile.
+      7. DO NOT include any markdown formatting or code blocks in your response.
+      8. Your response must be a valid JSON array that can be parsed directly.`
+
     };
 
     // Create the user message

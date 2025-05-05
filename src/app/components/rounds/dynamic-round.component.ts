@@ -1,14 +1,13 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, Router } from '@angular/router';
 import { ChallengeService } from '../../services/challenge.service';
+import { RoundEvaluationService, EvaluationResponse } from '../../services/round-evaluation.service';
 import { LoadingService } from '../../services/loading.service';
 import { UserService } from '../../services/user.service';
 import { RoundData, Challenge } from '../../models/challenge.model';
-import { StateService } from '../../services/state.service';
 import { RoundGeneratorService } from '../../services/round-generator.service';
-import { RoundEvaluationService } from '../../services/round-evaluation.service';
 
 interface Metric {
   name: string;
@@ -38,99 +37,102 @@ interface Badge {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './dynamic-round.component.html',
-  styleUrls: ['./dynamic-round.component.scss']
+  styleUrl: './dynamic-round.component.scss'
 })
-export class DynamicRoundComponent implements OnInit, OnDestroy {
-  challenge: Challenge | null = null;
+export class DynamicRoundComponent implements OnInit {
   currentRound: RoundData | null = null;
-  userResponse = '';
-  isSubmitting = false;
-  roundNumber = 1;
+  currentRoundNumber: number = 1;
+  maxRounds: number = 3;
+  userResponse: string = '';
+  isSubmitting: boolean = false;
+  showAiThinking: boolean = false;
+  showPerformance: boolean = false;
+  performanceMetrics: EvaluationResponse | null = null;
   evaluation: any = null;
-  showAiThinking = false;
+  roundNumber = 1;
   previousResponses: { [key: string]: string; } = {};
-  currentRoundNumber = 1;
-  isLoading = true;
-  maxRounds = 4;
   timeLeft = 300;
   timer: any;
-  private routeSubscription: any;
   progress: number = 0;
   timeRemaining: number = 60;
   metrics: Metric[] = [];
   error: string | null = null;
+  isLoading: boolean = false;
+  challenge: Challenge | null = null;
 
   constructor(
-    private challengeService: ChallengeService,
     private router: Router,
     private route: ActivatedRoute,
-    private loadingService: LoadingService,
-    private userService: UserService,
-    private stateService: StateService,
+    private challengeService: ChallengeService,
+    private roundEvaluationService: RoundEvaluationService,
     private roundGeneratorService: RoundGeneratorService,
-    private roundEvaluationService: RoundEvaluationService
+    private loadingService: LoadingService,
+    private userService: UserService
   ) { }
 
-  async ngOnInit() {
-    const challengeId = this.route.snapshot.paramMap.get('challengeId');
-    const roundNumber = Number(this.route.snapshot.paramMap.get('roundNumber'));
+  ngOnInit(): void {
+    this.loadRound();
+  }
 
-    if (!challengeId || !roundNumber) {
-      this.error = 'Invalid challenge or round number';
-      this.isLoading = false;
-      return;
-    }
-
+  async loadRound() {
+    this.isLoading = true;
+    this.error = null;
     try {
-      // Get the challenge
-      const challenge = await this.challengeService.getChallenge(challengeId);
-      if (!challenge) {
-        this.error = 'Challenge not found';
-        this.isLoading = false;
+      const challengeId = this.route.snapshot.paramMap.get('challengeId');
+      if (!challengeId) {
+        this.router.navigate(['/focus']);
         return;
       }
 
-      this.challenge = challenge;
-
-      // Check if the requested round is valid
-      if (roundNumber < 1 || roundNumber > 3) {
-        this.error = 'Invalid round number';
-        this.isLoading = false;
+      this.challenge = await this.challengeService.getChallenge(challengeId);
+      if (!this.challenge) {
+        this.router.navigate(['/focus']);
         return;
       }
 
-      // If the challenge is completed, redirect to results
-      if (challenge.status === 'completed') {
-        await this.router.navigate(['/results', challengeId]);
+      // Ensure rounds is an array
+      const rounds = Array.isArray(this.challenge.rounds) ? this.challenge.rounds : [];
+
+      // Determine current round based on completed rounds
+      const completedRounds = rounds.filter((round: RoundData) => round && round.evaluation);
+      this.currentRoundNumber = completedRounds.length + 1;
+
+      // If all rounds are completed, redirect to results
+      if (this.currentRoundNumber > this.maxRounds) {
+        this.router.navigate(['/results']);
         return;
       }
 
-      // If the requested round is not the current round, redirect to the current round
-      if (roundNumber !== challenge.currentRound) {
-        await this.router.navigate(['/round', challengeId, challenge.currentRound]);
-        return;
+      // Check if we need to generate a new round
+      if (this.currentRoundNumber > 1) {
+        const previousRound = rounds[this.currentRoundNumber - 2];
+        if (!previousRound || !previousRound.evaluation) {
+          // Previous round not completed, redirect to it
+          this.router.navigate(['/round', challengeId]);
+          return;
+        }
       }
 
       // Get or generate the current round
-      const existingRound = challenge.rounds[roundNumber - 1];
-      if (existingRound) {
-        this.currentRound = existingRound;
+      if (rounds[this.currentRoundNumber - 1]) {
+        this.currentRound = rounds[this.currentRoundNumber - 1];
       } else {
-        // Generate new round using AI
+        // Generate new round using AI based on previous rounds
+        const previousRounds = rounds.slice(0, this.currentRoundNumber - 1);
         const generatedRound = await this.roundGeneratorService.generateRound(
-          challenge.focus.focusArea,
-          roundNumber.toString(),
-          roundNumber === 1 ? undefined : JSON.stringify({
-            previousRounds: challenge.rounds.slice(0, roundNumber - 1),
-            focus: challenge.focus
-          })
+          this.challenge.focus.focusArea,
+          this.currentRoundNumber.toString(),
+          previousRounds.length > 0 ? JSON.stringify({
+            previousRounds,
+            focus: this.challenge.focus
+          }) : undefined
         );
 
         // Get the first challenge from the generated round
         const firstChallenge = generatedRound.challenges[0];
 
         this.currentRound = {
-          roundNumber,
+          roundNumber: this.currentRoundNumber,
           question: firstChallenge.question,
           answer: '',
           aiResponse: ''
@@ -147,13 +149,6 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
     }
 
     this.startTimer();
-  }
-
-  ngOnDestroy() {
-    if (this.routeSubscription) {
-      this.routeSubscription.unsubscribe();
-    }
-    this.stopTimer();
   }
 
   startTimer() {
@@ -174,61 +169,32 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   }
 
   async submitResponse() {
-    if (!this.userResponse.trim()) return;
+    if (!this.currentRound || !this.userResponse.trim()) return;
 
     this.isSubmitting = true;
-    this.loadingService.show();
+    this.showAiThinking = true;
+    this.error = null;
     try {
-      const userId = this.userService.getCurrentUserId();
-      if (!userId) throw new Error('No user ID found');
-
-      // Save the response
-      await this.challengeService.saveResponse({
-        challengeId: userId,
-        response: this.userResponse,
-        aiResponse: '',
-        evaluation: {
-          metrics: {
-            creativity: 0,
-            practicality: 0,
-            depth: 0,
-            humanEdge: 0,
-            overall: 0
-          },
-          feedback: [],
-          strengths: [],
-          improvements: [],
-          comparison: {
-            userScore: 0,
-            rivalScore: 0,
-            advantage: 'tie',
-            advantageReason: ''
-          },
-          badges: []
-        },
-        question: this.currentRound?.question || ''
-      });
-
-      // Update the round with the answer
-      if (this.currentRound) {
-        await this.challengeService.addRound(userId, {
-          ...this.currentRound,
-          answer: this.userResponse
-        });
+      const challengeId = this.route.snapshot.paramMap.get('challengeId');
+      if (!challengeId) {
+        throw new Error('No challenge ID found');
       }
 
-      // Navigate to results if it's the last round
-      if (this.currentRoundNumber === this.maxRounds) {
-        this.router.navigate(['/results']);
-      } else {
-        // Navigate to next round
-        this.router.navigate(['/round', this.currentRoundNumber + 1]);
-      }
+      // Submit response and get evaluation
+      this.evaluation = await this.challengeService.submitResponse(challengeId, this.userResponse);
+
+      // Show performance metrics
+      this.performanceMetrics = this.evaluation;
+      this.showPerformance = true;
+
+      // Don't navigate immediately - let the user see the evaluation first
+      // The user will click the continue button to move to the next round
     } catch (error) {
       console.error('Error submitting response:', error);
+      this.error = 'Failed to submit response. Please try again.';
     } finally {
       this.isSubmitting = false;
-      this.loadingService.hide();
+      this.showAiThinking = false;
     }
   }
 
@@ -297,11 +263,17 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
     return this.evaluation?.badges || [];
   }
 
-  handleContinue() {
-    if (this.currentRoundNumber < 5) {
-      this.router.navigate(['/round', this.currentRoundNumber + 1]);
-    } else {
+  async handleContinue() {
+    const challengeId = this.route.snapshot.paramMap.get('challengeId');
+    if (!challengeId) return;
+
+    if (this.currentRoundNumber === this.maxRounds) {
       this.router.navigate(['/results']);
+    } else {
+      // Update challenge status to next round
+      await this.challengeService.updateChallengeStatus(challengeId, 'in-progress');
+      // Reload the component to show the next round
+      this.router.navigate(['/round', challengeId]);
     }
   }
 
