@@ -1,50 +1,50 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { UserService } from './user.service';
-import { User } from './user.service';
+import { User } from '../models/user.model';
 
 @Injectable({
-    providedIn: 'root'
+  providedIn: 'root'
 })
 export class StateService {
-    private userSubject = new BehaviorSubject<User | null>(null);
-    private loadingSubject = new BehaviorSubject<boolean>(true);
+  private userSubject = new BehaviorSubject<User | null>(null);
+  private loadingSubject = new BehaviorSubject<boolean>(true);
 
-    user$ = this.userSubject.asObservable();
-    loading$ = this.loadingSubject.asObservable();
+  user$ = this.userSubject.asObservable();
+  loading$ = this.loadingSubject.asObservable();
 
-    constructor(private userService: UserService) {
-        this.initializeUser();
-    }
+  constructor(private userService: UserService) {
+    this.initializeUser();
+  }
 
-    private async initializeUser() {
-        this.loadingSubject.next(true);
-        try {
-            const userId = localStorage.getItem('mereka_user_id');
-            if (userId) {
-                const user = await this.userService.getUser(userId);
-                this.userSubject.next(user);
-            }
-        } catch (error) {
-            console.error('Error initializing user:', error);
-        } finally {
-            this.loadingSubject.next(false);
-        }
-    }
-
-    setUser(user: User | null) {
+  private async initializeUser() {
+    this.loadingSubject.next(true);
+    try {
+      const userId = localStorage.getItem('mereka_user_id');
+      if (userId) {
+        const user = await this.userService.getUser(userId);
         this.userSubject.next(user);
+      }
+    } catch (error) {
+      console.error('Error initializing user:', error);
+    } finally {
+      this.loadingSubject.next(false);
     }
+  }
 
-    getUser(): User | null {
-        return this.userSubject.value;
-    }
+  setUser(user: User | null) {
+    this.userSubject.next(user);
+  }
 
-    getUserId(): string | null {
-        return this.userSubject.value?.id || null;
-    }
+  getUser(): User | null {
+    return this.userSubject.value;
+  }
 
-    isLoading(): boolean {
-        return this.loadingSubject.value;
-    }
+  getUserId(): string | null {
+    return this.userSubject.value?.id || null;
+  }
+
+  isLoading(): boolean {
+    return this.loadingSubject.value;
+  }
 }

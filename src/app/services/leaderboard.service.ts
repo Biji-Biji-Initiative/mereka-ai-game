@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Firestore, collection, query, orderBy, limit, getDocs, where, doc, getDoc, DocumentData } from '@angular/fire/firestore';
 import { ResultsAnalysisService, FinalResults } from './results-analysis.service';
-import { UserContext } from './user.service';
+import { UserContext } from '../models/user.model';
 import { ChallengeService } from './challenge.service';
 
 export interface LeaderboardEntry {
