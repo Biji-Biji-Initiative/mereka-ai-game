@@ -106,11 +106,17 @@ export class DynamicRoundComponent implements OnInit {
 
       // Check if we need to generate a new round
       if (this.currentRoundNumber > 1) {
-        const previousRound = rounds[this.currentRoundNumber - 2];
-        if (!previousRound || !previousRound.evaluation) {
-          // Previous round not completed, redirect to it
-          this.router.navigate(['/round', challengeId]);
-          return;
+        // Check if all previous rounds are completed
+        const allPreviousRoundsCompleted = rounds.slice(0, this.currentRoundNumber - 1)
+          .every(round => round && round.evaluation);
+
+        if (!allPreviousRoundsCompleted) {
+          // Find the first incomplete round
+          const incompleteRoundIndex = rounds.findIndex(round => !round || !round.evaluation);
+          if (incompleteRoundIndex !== -1) {
+            this.router.navigate(['/round', challengeId]);
+            return;
+          }
         }
       }
 
@@ -118,15 +124,22 @@ export class DynamicRoundComponent implements OnInit {
       if (rounds[this.currentRoundNumber - 1]) {
         this.currentRound = rounds[this.currentRoundNumber - 1];
       } else {
-        // Generate new round using AI based on previous rounds
-        const previousRounds = rounds.slice(0, this.currentRoundNumber - 1);
+        // Get all previous rounds data
+        const previousRounds = rounds.slice(0, this.currentRoundNumber - 1).map(round => ({
+          question: round.question,
+          answer: round.answer,
+          evaluation: round.evaluation
+        }));
+
+        // Generate new round using AI based on all previous rounds
         const generatedRound = await this.roundGeneratorService.generateRound(
           this.challenge.focus.focusArea,
           this.currentRoundNumber.toString(),
           previousRounds.length > 0 ? JSON.stringify({
             previousRounds,
             focus: this.challenge.focus
-          }) : undefined
+          }) : undefined,
+          previousRounds
         );
 
         // Get the first challenge from the generated round

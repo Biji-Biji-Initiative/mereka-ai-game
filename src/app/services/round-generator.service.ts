@@ -71,6 +71,11 @@ export interface RoundGenerationRequest {
   userId: string;
   focusType: string;
   context?: string;
+  previousRounds?: {
+    question: string;
+    answer: string;
+    evaluation: any;
+  }[];
 }
 
 export interface GeneratedRound {
@@ -107,7 +112,7 @@ export class RoundGeneratorService {
     private userService: UserService
   ) { }
 
-  async generateRound(userId: string, focusType: string, context?: string): Promise<RoundResponse> {
+  async generateRound(userId: string, focusType: string, context?: string, previousRounds?: any[]): Promise<RoundResponse> {
     try {
       // Fetch user data from the database
       const traitsData = await this.traitsService.getTraits(userId);
@@ -124,7 +129,8 @@ export class RoundGeneratorService {
         traits: traitsData || exampleCloudFunctionPayload.traits,
         attitudes: attitudesData || exampleCloudFunctionPayload.attitudes,
         userProfile: userProfile || exampleCloudFunctionPayload.userProfile,
-        options: exampleCloudFunctionPayload.options
+        options: exampleCloudFunctionPayload.options,
+        previousRounds: previousRounds || []
       };
 
       // Create the simple request for array of strings
@@ -173,6 +179,18 @@ export class RoundGeneratorService {
     // Create a summary of the user's traits and attitudes
     const traitsSummary = this.summarizeTraitsAndAttitudes(payload.traits, payload.attitudes);
 
+    // Create a summary of previous rounds if they exist
+    let previousRoundsSummary = '';
+    if (payload.previousRounds && payload.previousRounds.length > 0) {
+      previousRoundsSummary = '\n\nPrevious Rounds Summary:';
+      payload.previousRounds.forEach((round, index) => {
+        previousRoundsSummary += `\nRound ${index + 1}:
+          - Question: ${round.question}
+          - User's Answer: ${round.answer}
+          - Evaluation: ${JSON.stringify(round.evaluation)}`;
+      });
+    }
+
     // Create the system message
     const systemMessage = {
       role: 'system',
@@ -190,6 +208,8 @@ export class RoundGeneratorService {
       7. Generate 2 questions that progressively increase in difficulty.
       8. Each question should be clear, concise, and focused on the specified focus type.
       9. The questions should be open-ended and encourage thoughtful responses.
+      10. Consider the user's previous performance and responses to create more challenging and relevant questions.
+      ${previousRoundsSummary}
 
       Available focus areas: ${focusAreas}
       Available context categories: ${contextCategories}

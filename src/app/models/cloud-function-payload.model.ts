@@ -67,6 +67,11 @@ export interface CloudFunctionPayload {
     attitudes: AttitudesDataPayload;
     userProfile: UserProfilePayload;
     options: RoundGenerationOptionsPayload;
+    previousRounds?: {
+        question: string;
+        answer: string;
+        evaluation: any;
+    }[];
 }
 
 // Example payload for testing
