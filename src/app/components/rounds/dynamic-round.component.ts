@@ -47,6 +47,7 @@ export class DynamicRoundComponent implements OnInit {
   isSubmitting: boolean = false;
   showAiThinking: boolean = false;
   showPerformance: boolean = false;
+  showQuestion: boolean = true;
   performanceMetrics: EvaluationResponse | null = null;
   evaluation: any = null;
   roundNumber = 1;
@@ -181,11 +182,11 @@ export class DynamicRoundComponent implements OnInit {
       }
 
       // Submit response and get evaluation
-      this.evaluation = await this.challengeService.submitResponse(challengeId, this.userResponse);
-
-      // Show performance metrics
+      this.evaluation = (await this.challengeService.submitResponse(challengeId, this.userResponse)).evaluation;
+      // Show performance metrics and hide question
       this.performanceMetrics = this.evaluation;
       this.showPerformance = true;
+      this.showQuestion = false;
 
       // Don't navigate immediately - let the user see the evaluation first
       // The user will click the continue button to move to the next round
@@ -198,15 +199,51 @@ export class DynamicRoundComponent implements OnInit {
     }
   }
 
-  getMetricValue(metric: Metric): number {
-    return metric.value;
+  getMetricValue(metricName: string): number {
+    if (!this.performanceMetrics?.metrics) return 0;
+    return this.performanceMetrics.metrics[metricName as keyof typeof this.performanceMetrics.metrics] || 0;
   }
 
-  getMetricColor(metric: Metric): string {
-    const percentage = (metric.value / metric.max) * 100;
-    if (percentage >= 80) return 'bg-success';
-    if (percentage >= 60) return 'bg-warning';
+  getMetricColor(metricName: string): string {
+    const value = this.getMetricValue(metricName);
+    if (value >= 80) return 'bg-success';
+    if (value >= 60) return 'bg-warning';
     return 'bg-danger';
+  }
+
+  getComparisonText(): string {
+    if (!this.performanceMetrics?.comparison) return '';
+    const comparison = this.performanceMetrics.comparison;
+    return comparison.advantage === 'user' ? 'You' :
+      comparison.advantage === 'rival' ? 'AI' : 'Tie';
+  }
+
+  getComparisonReason(): string {
+    return this.performanceMetrics?.comparison?.advantageReason || '';
+  }
+
+  getUserScore(): number {
+    return this.performanceMetrics?.comparison?.userScore || 0;
+  }
+
+  getRivalScore(): number {
+    return this.performanceMetrics?.comparison?.rivalScore || 0;
+  }
+
+  getFeedback(): string[] {
+    return this.performanceMetrics?.feedback || [];
+  }
+
+  getStrengths(): string[] {
+    return this.performanceMetrics?.strengths || [];
+  }
+
+  getImprovements(): string[] {
+    return this.performanceMetrics?.improvements || [];
+  }
+
+  getBadges(): string[] {
+    return this.performanceMetrics?.badges || [];
   }
 
   private initializeRound() {
@@ -234,35 +271,6 @@ export class DynamicRoundComponent implements OnInit {
     }
   }
 
-  getFeedback(): Feedback[] {
-    return [
-      { text: 'Great job on accuracy!', type: 'positive' },
-      { text: 'Try to improve your speed', type: 'negative' },
-      { text: 'Your strategy is improving', type: 'neutral' }
-    ];
-  }
-
-  getComparison(): Comparison {
-    return {
-      userScore: 75,
-      rivalScore: 65,
-      advantage: 'user',
-      advantageReason: 'Better accuracy and strategy'
-    };
-  }
-
-  getStrengths(): string[] {
-    return ['High accuracy', 'Good strategy', 'Consistent performance'];
-  }
-
-  getImprovements(): string[] {
-    return ['Increase speed', 'Better time management', 'More aggressive play'];
-  }
-
-  getBadges(): Badge[] {
-    return this.evaluation?.badges || [];
-  }
-
   async handleContinue() {
     const challengeId = this.route.snapshot.paramMap.get('challengeId');
     if (!challengeId) return;
@@ -272,6 +280,9 @@ export class DynamicRoundComponent implements OnInit {
     } else {
       // Update challenge status to next round
       await this.challengeService.updateChallengeStatus(challengeId, 'in-progress');
+      // Reset visibility for next round
+      this.showQuestion = true;
+      this.showPerformance = false;
       // Reload the component to show the next round
       this.router.navigate(['/round', challengeId]);
     }

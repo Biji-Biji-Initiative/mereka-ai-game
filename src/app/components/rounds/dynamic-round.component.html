@@ -27,29 +27,40 @@
     </div>
 
     <!-- Question -->
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <div *ngIf="showQuestion" class="bg-white rounded-lg shadow-md p-6">
       <h2 class="text-xl font-semibold mb-4">Your Challenge</h2>
       <p class="text-gray-700 whitespace-pre-wrap">{{currentRound.question}}</p>
     </div>
 
     <!-- Response Form -->
-    <div class="bg-white rounded-lg shadow-md p-6">
+    <div *ngIf="showQuestion" class="bg-white rounded-lg shadow-md p-6">
       <h2 class="text-xl font-semibold mb-4">Your Response</h2>
       <textarea [(ngModel)]="userResponse"
         class="w-full h-48 p-4 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-        placeholder="Type your response here..."></textarea>
+        placeholder="Type your response here..." [disabled]="isSubmitting"></textarea>
       <div class="mt-4 flex justify-end">
         <button
           class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          [disabled]="!userResponse.trim() || isLoading" (click)="submitResponse()">
-          {{isLoading ? 'Submitting...' : 'Submit Response'}}
+          [disabled]="!userResponse.trim() || isSubmitting" (click)="submitResponse()">
+          {{isSubmitting ? 'Submitting...' : 'Submit Response'}}
         </button>
+      </div>
+    </div>
+
+    <!-- AI Thinking Overlay -->
+    <div *ngIf="showAiThinking"
+      class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div class="bg-white dark:bg-gray-800 p-8 rounded-lg max-w-md w-full text-center">
+        <h3 class="text-xl font-bold mb-4">AI is analyzing your response</h3>
+        <p class="mt-4 text-gray-600 dark:text-gray-300">
+          The AI is evaluating your response to identify your human edge.
+        </p>
       </div>
     </div>
   </div>
 
   <!-- Evaluation View -->
-  <div *ngIf="evaluation" class="card w-full max-w-4xl mx-auto shadow-lg">
+  <div *ngIf="evaluation && performanceMetrics" class="card w-full max-w-4xl mx-auto shadow-lg">
     <div class="card-header">
       <h2 class="text-2xl font-bold text-primary">Round {{currentRoundNumber}} Evaluation</h2>
     </div>
@@ -59,13 +70,15 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div class="space-y-4">
           <h3 class="font-semibold text-lg">Your Performance</h3>
-          <div class="space-y-2" *ngFor="let metric of metrics">
-            <div class="flex justify-between items-center">
-              <span>{{metric.name | titlecase}}</span>
-              <span>{{getMetricValue(metric)}}%</span>
-            </div>
-            <div class="progress-bar">
-              <div class="h-2 bg-primary" [style.width.%]="getMetricValue(metric)"></div>
+          <div class="space-y-2">
+            <div *ngFor="let metric of ['creativity', 'practicality', 'depth', 'humanEdge', 'overall']" class="metric">
+              <div class="flex justify-between items-center">
+                <span>{{metric | titlecase}}</span>
+                <span>{{getMetricValue(metric)}}%</span>
+              </div>
+              <div class="progress-bar">
+                <div class="h-2" [class]="getMetricColor(metric)" [style.width.%]="getMetricValue(metric)"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -83,19 +96,18 @@
           <div class="border p-4 rounded-lg bg-gray-50 dark:bg-gray-800">
             <div class="flex justify-between items-center mb-2">
               <span>Your Score</span>
-              <span class="font-bold">{{getComparison().userScore}}%</span>
+              <span class="font-bold">{{getUserScore()}}%</span>
             </div>
             <div class="flex justify-between items-center mb-4">
               <span>AI Score</span>
-              <span class="font-bold">{{getComparison().rivalScore}}%</span>
+              <span class="font-bold">{{getRivalScore()}}%</span>
             </div>
             <p class="text-gray-800 dark:text-gray-200">
               <span class="font-semibold">Advantage: </span>
-              {{getComparison().advantage === 'user' ? 'You' :
-              getComparison().advantage === 'rival' ? 'AI' : 'Tie'}}
+              {{getComparisonText()}}
             </p>
             <p class="text-gray-800 dark:text-gray-200 mt-2">
-              {{getComparison().advantageReason}}
+              {{getComparisonReason()}}
             </p>
           </div>
         </div>
@@ -127,8 +139,7 @@
         <h3 class="text-lg font-semibold mb-2">Badges Earned</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div *ngFor="let badge of getBadges()" class="bg-white p-4 rounded-lg shadow">
-            <h4 class="font-medium">{{badge.name | titlecase}}</h4>
-            <p class="text-gray-600">{{badge.description}}</p>
+            <h4 class="font-medium">{{badge | titlecase}}</h4>
           </div>
         </div>
       </div>
@@ -139,16 +150,6 @@
       <button class="btn btn-primary" (click)="handleContinue()">
         {{currentRoundNumber === maxRounds ? 'View Results' : 'Continue to Round ' + (currentRoundNumber + 1)}}
       </button>
-    </div>
-  </div>
-
-  <!-- AI Thinking Overlay -->
-  <div *ngIf="showAiThinking" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-    <div class="bg-white dark:bg-gray-800 p-8 rounded-lg max-w-md w-full text-center">
-      <h3 class="text-xl font-bold mb-4">AI is analyzing your response</h3>
-      <p class="mt-4 text-gray-600 dark:text-gray-300">
-        The AI is evaluating your response to identify your human edge.
-      </p>
     </div>
   </div>
 </div>
