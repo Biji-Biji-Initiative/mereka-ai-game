@@ -7,6 +7,7 @@ import { LoadingService } from '../../services/loading.service';
 import { UserService } from '../../services/user.service';
 import { RoundData } from '../../models/challenge.model';
 import { StateService } from '../../services/state.service';
+import { RoundGeneratorService } from '../../services/round-generator.service';
 
 interface Metric {
   name: string;
@@ -62,27 +63,20 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
     private route: ActivatedRoute,
     private loadingService: LoadingService,
     private userService: UserService,
-    private stateService: StateService
+    private stateService: StateService,
+    private roundGeneratorService: RoundGeneratorService
   ) { }
 
-  ngOnInit() {
-    console.log('DynamicRoundComponent initialized');
+  async ngOnInit() {
     this.routeSubscription = this.route.params.subscribe(params => {
-      console.log('Route params:', params);
       const roundNumber = parseInt(params['round'], 10);
-      console.log('Parsed round number:', roundNumber);
       if (roundNumber) {
         this.currentRoundNumber = roundNumber;
         this.loadCurrentRound();
       } else {
-        console.error('No round number found in route params');
         this.router.navigate(['/focus']);
       }
     });
-
-    // Log the current route
-    console.log('Current route:', this.route.snapshot.url);
-    console.log('Route config:', this.route.snapshot.routeConfig);
 
     this.startTimer();
   }
@@ -114,101 +108,124 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   async loadCurrentRound() {
     this.isLoading = true;
     try {
-      const challengeId = localStorage.getItem('currentChallengeId');
-      if (!challengeId) {
-        console.error('No challenge ID found');
-        this.router.navigate(['/focus']);
-        return;
-      }
+      const userId = this.userService.getCurrentUserId();
+      if (!userId) throw new Error('No user ID found');
 
-      const challenge = await this.challengeService.getChallenge(challengeId);
+      // Get the current challenge
+      const challenge = await this.challengeService.getChallenge(userId);
       if (!challenge) {
-        console.error('Challenge not found');
         this.router.navigate(['/focus']);
         return;
       }
 
-      this.maxRounds = challenge.questions.length;
-      this.currentRound = {
-        question: challenge.questions[this.currentRoundNumber - 1],
-        roundNumber: this.currentRoundNumber,
-        answer: ''
-      };
+      // Check if we need to generate a new round
+      if (this.currentRoundNumber > challenge.rounds.length) {
+        // Generate new round based on previous rounds and focus
+        const round = await this.roundGeneratorService.generateRound(
+          userId,
+          challenge.focus.focusArea,
+          JSON.stringify({
+            previousRounds: challenge.rounds,
+            focus: challenge.focus
+          })
+        );
+
+        // Add the new round to the challenge
+        await this.challengeService.addRound(challenge.id, {
+          roundNumber: this.currentRoundNumber,
+          question: round.challenges[0].question,
+          answer: ''
+        });
+
+        // Reload the challenge to get the updated rounds
+        const updatedChallenge = await this.challengeService.getChallenge(userId);
+        if (!updatedChallenge) throw new Error('Failed to load updated challenge');
+
+        this.currentRound = updatedChallenge.rounds[this.currentRoundNumber - 1];
+      } else {
+        this.currentRound = challenge.rounds[this.currentRoundNumber - 1];
+      }
 
       // Load previous responses if any
-      const userId = this.userService.getCurrentUserId();
-      if (userId) {
-        const previousResponse = await this.challengeService.getRoundResponse(
-          userId,
-          this.currentRoundNumber
-        );
-        if (previousResponse) {
-          this.userResponse = previousResponse.response;
-          this.evaluation = previousResponse.evaluation;
-        }
+      if (this.currentRound.answer) {
+        this.userResponse = this.currentRound.answer;
       }
     } catch (error) {
       console.error('Error loading round:', error);
+      this.router.navigate(['/focus']);
     } finally {
       this.isLoading = false;
     }
   }
 
   async submitResponse() {
-    if (this.isSubmitting) return;
+    if (!this.userResponse.trim()) return;
 
     this.isSubmitting = true;
-    this.showAiThinking = true;
-    this.stopTimer();
-
+    this.loadingService.show();
     try {
-      const challengeId = localStorage.getItem('currentChallengeId');
-      if (!challengeId) {
-        throw new Error('No challenge ID found');
-      }
-
-      const response = await this.challengeService.submitResponse(challengeId, this.userResponse);
-      this.evaluation = response.evaluation;
+      const userId = this.userService.getCurrentUserId();
+      if (!userId) throw new Error('No user ID found');
 
       // Save the response
-      const userId = this.userService.getCurrentUserId();
-      if (userId) {
-        await this.challengeService.saveRoundResponse(
-          userId,
-          this.currentRoundNumber,
-          {
-            challengeId,
-            response: this.userResponse,
-            evaluation: this.evaluation,
-            question: this.currentRound?.question || '',
-            aiResponse: response.aiResponse || ''
-          }
-        );
+      await this.challengeService.saveResponse({
+        challengeId: userId,
+        response: this.userResponse,
+        aiResponse: '',
+        evaluation: {
+          metrics: {
+            creativity: 0,
+            practicality: 0,
+            depth: 0,
+            humanEdge: 0,
+            overall: 0
+          },
+          feedback: [],
+          strengths: [],
+          improvements: [],
+          comparison: {
+            userScore: 0,
+            rivalScore: 0,
+            advantage: 'tie',
+            advantageReason: ''
+          },
+          badges: []
+        },
+        question: this.currentRound?.question || ''
+      });
+
+      // Update the round with the answer
+      if (this.currentRound) {
+        await this.challengeService.addRound(userId, {
+          ...this.currentRound,
+          answer: this.userResponse
+        });
       }
 
-      // Navigate to next round or results
-      if (this.currentRoundNumber < this.maxRounds) {
-        this.router.navigate([`/round/${this.currentRoundNumber + 1}`]);
-      } else {
+      // Navigate to results if it's the last round
+      if (this.currentRoundNumber === this.maxRounds) {
         this.router.navigate(['/results']);
+      } else {
+        // Navigate to next round
+        this.router.navigate(['/round', this.currentRoundNumber + 1]);
       }
     } catch (error) {
       console.error('Error submitting response:', error);
     } finally {
       this.isSubmitting = false;
-      this.showAiThinking = false;
+      this.loadingService.hide();
     }
   }
 
-  getMetricValue(metric: string): number {
-    return this.evaluation?.evaluation?.metrics?.[metric] || 0;
+  getMetricValue(metric: Metric): number {
+    return metric.value;
   }
 
-  getMetricColor(metric: string): string {
-    const value = this.getMetricValue(metric);
-    if (value >= 80) return 'text-green-500';
-    if (value >= 60) return 'text-yellow-500';
-    return 'text-red-500';
+  getMetricColor(metric: Metric): string {
+    const percentage = (metric.value / metric.max) * 100;
+    if (percentage >= 80) return 'bg-success';
+    if (percentage >= 60) return 'bg-warning';
+    return 'bg-danger';
   }
 
   private initializeRound() {
@@ -262,10 +279,7 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   }
 
   getBadges(): Badge[] {
-    return [
-      { name: 'Accuracy Master', description: 'Achieved 90% accuracy' },
-      { name: 'Speed Demon', description: 'Completed round in record time' }
-    ];
+    return this.evaluation?.badges || [];
   }
 
   handleContinue() {

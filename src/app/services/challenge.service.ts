@@ -19,6 +19,7 @@ export interface Challenge {
   description: string;
   questions: string[];
   currentRound: number;
+  status: 'pending' | 'in-progress' | 'completed';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -178,60 +179,33 @@ export class ChallengeService extends BaseService {
 
   async createChallenge(focusData: FocusData): Promise<string> {
     const userId = this.userService.getCurrentUserId();
-    if (!userId) {
-      throw new Error('User not found');
-    }
+    if (!userId) throw new Error('No user ID found');
 
-    console.log('Creating challenge for user:', userId);
-
-    // Generate dynamic questions using the RoundGeneratorService
-    const generatedRound = await this.roundGeneratorService.generateRound(userId, focusData.focusArea);
-    console.log('Generated round:', generatedRound);
-
-    // Extract questions from the generated round
-    const questions = generatedRound.challenges.map(challenge => challenge.question);
-    const maxRounds = questions.length;
-    console.log(`Generated ${maxRounds} questions for focus area: ${focusData.focusArea}`);
-
-    // Initialize rounds array with the correct number of rounds
-    const rounds: RoundData[] = [];
-    for (let i = 1;i <= maxRounds;i++) {
-      rounds.push({
-        roundNumber: i,
-        question: questions[i - 1] || 'No question available',
-        answer: ''
-      });
-    }
-
-    // Create initial challenge data
     const challenge: Challenge = {
       id: '',
       userId,
       focus: focusData,
-      rounds: rounds,
+      rounds: [],
       description: focusData.description,
-      questions,
+      questions: [],
       currentRound: 1,
+      status: 'pending',
       createdAt: new Date(),
       updatedAt: new Date()
     };
 
-    try {
-      // Create the challenge document
-      const challengeId = await this.createDocument(this.COLLECTION, challenge);
-      console.log('Challenge document created with ID:', challengeId);
+    const challengeId = await this.createDocument(this.COLLECTION_NAME, challenge);
+    return challengeId;
+  }
 
-      // Update the challenge with its ID
-      await this.updateDocument(this.COLLECTION, challengeId, { id: challengeId });
+  async updateChallengeStatus(challengeId: string, status: 'pending' | 'in-progress' | 'completed'): Promise<void> {
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge) throw new Error('Challenge not found');
 
-      // Save the current challenge ID to the user's document
-      await this.updateDocument('users', userId, { currentChallengeId: challengeId });
-
-      return challengeId;
-    } catch (error) {
-      console.error('Error creating challenge:', error);
-      throw error;
-    }
+    await this.updateDocument(this.COLLECTION_NAME, challengeId, {
+      status,
+      updatedAt: new Date()
+    });
   }
 
   async addRound(challengeId: string, roundData: RoundData): Promise<void> {

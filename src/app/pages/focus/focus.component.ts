@@ -1,9 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
-import { FocusArea } from '../../models/focus.interface';
+import { FocusArea } from '../../services/focus-area-generator.service';
 import { ChallengeService } from '../../services/challenge.service';
 import { LoadingService } from '../../services/loading.service';
+import { RoundGeneratorService } from '../../services/round-generator.service';
+import { FocusAreaGeneratorService } from '../../services/focus-area-generator.service';
 
 @Component({
   selector: 'app-focus',
@@ -14,36 +16,34 @@ import { LoadingService } from '../../services/loading.service';
 })
 export class FocusComponent implements OnInit {
   selectedFocusArea: FocusArea | null = null;
-  focusAreas = [
-    {
-      id: 'creative',
-      name: 'Creative Thinking',
-      description: 'Test your creative problem-solving abilities against AI systems.',
-      matchLevel: 85
-    },
-    {
-      id: 'strategic',
-      name: 'Strategic Planning',
-      description: 'Challenge AI in strategic decision-making scenarios.',
-      matchLevel: 75
-    },
-    {
-      id: 'analytical',
-      name: 'Analytical Reasoning',
-      description: 'Compete with AI in complex analytical tasks.',
-      matchLevel: 80
-    }
-  ];
+  focusAreas: FocusArea[] = [];
+  isLoading = false;
+  error: string | null = null;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private challengeService: ChallengeService,
-    private loadingService: LoadingService
+    private loadingService: LoadingService,
+    private roundGeneratorService: RoundGeneratorService,
+    private focusAreaGeneratorService: FocusAreaGeneratorService
   ) { }
 
-  ngOnInit() {
-    // Component initialization
+  ngOnInit(): void {
+    this.generateFocusAreas();
+  }
+
+  async generateFocusAreas() {
+    this.isLoading = true;
+    this.error = null;
+    try {
+      this.focusAreas = await this.focusAreaGeneratorService.generateFocusAreas();
+    } catch (err) {
+      this.error = 'Failed to generate focus areas. Please try again.';
+      console.error('Error generating focus areas:', err);
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   selectFocusArea(area: FocusArea) {
@@ -53,18 +53,15 @@ export class FocusComponent implements OnInit {
   async onContinue() {
     if (!this.selectedFocusArea) return;
 
-    this.loadingService.show();
     try {
-      const nextRoute = this.route.snapshot.data['next'];
-      await this.challengeService.createChallenge({
+      const challengeId = await this.challengeService.createChallenge({
         focusArea: this.selectedFocusArea.id,
         description: this.selectedFocusArea.description
       });
-      this.router.navigate([nextRoute]);
+      await this.router.navigate(['/round', challengeId, 1]);
     } catch (error) {
       console.error('Error creating challenge:', error);
-    } finally {
-      this.loadingService.hide();
+      this.error = 'Failed to create challenge. Please try again.';
     }
   }
 

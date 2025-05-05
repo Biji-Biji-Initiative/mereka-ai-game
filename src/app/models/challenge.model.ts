@@ -14,6 +14,22 @@ export interface RoundData {
     evaluation?: any;
 }
 
+export interface Challenge {
+    id: string;
+    userId: string;
+    focus: {
+        focusArea: string;
+        description: string;
+    };
+    rounds: RoundData[];
+    description: string;
+    questions: string[];
+    currentRound: number;
+    status: 'pending' | 'in-progress' | 'completed';
+    createdAt: Date;
+    updatedAt: Date;
+}
+
 export interface ChallengeResponse {
     challengeId: string;
     response: string;

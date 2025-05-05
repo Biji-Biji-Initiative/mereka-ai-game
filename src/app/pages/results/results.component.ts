@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { ResultsAnalysisService, FinalResults } from '../../services/results-analysis.service';
 import { ActivatedRoute } from '@angular/router';
+import { ChallengeService } from '../../services/challenge.service';
+import { UserService } from '../../services/user.service';
 
 type RoundKey = 'round1' | 'round2' | 'round3';
 
@@ -21,20 +23,36 @@ export class ResultsComponent implements OnInit {
 
   constructor(
     private resultsAnalysisService: ResultsAnalysisService,
-    private route: ActivatedRoute
+    private route: ActivatedRoute,
+    private router: Router,
+    private challengeService: ChallengeService,
+    private userService: UserService
   ) { }
 
-  ngOnInit() {
-    // Get userId and challengeId from route parameters
-    const userId = localStorage.getItem('mereka_user_id');
-    const challengeId = localStorage.getItem('currentChallengeId');
-    console.log('ResultsComponent - userId', userId);
-    console.log('ResultsComponent - challengeId', challengeId);
-    localStorage.removeItem('currentChallengeId');
-    if (userId && challengeId) {
-      this.loadResults(userId, challengeId);
-    } else {
-      console.log('No userId or challengeId found');
+  async ngOnInit() {
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.error = true;
+      this.loading = false;
+      return;
+    }
+
+    try {
+      // Get the current challenge
+      const challenge = await this.challengeService.getChallenge(userId);
+      if (!challenge) {
+        this.error = true;
+        this.loading = false;
+        return;
+      }
+
+      // Mark the challenge as completed
+      await this.challengeService.updateChallengeStatus(challenge.id, 'completed');
+
+      // Load and analyze results
+      this.loadResults(userId, challenge.id);
+    } catch (error) {
+      console.error('Error in results initialization:', error);
       this.error = true;
       this.loading = false;
     }
@@ -43,20 +61,16 @@ export class ResultsComponent implements OnInit {
   private loadResults(userId: string, challengeId: string) {
     this.loading = true;
     this.error = false;
-    console.log('ResultsComponent - Loading results for userId:', userId, 'challengeId:', challengeId);
+
     this.resultsAnalysisService.analyzeResults(userId, challengeId)
       .subscribe({
         next: (results) => {
-          console.log('ResultsComponent - Results loaded:', results);
           this.results = results;
-
-          // Dynamically generate rounds array based on available data
           this.updateRoundsArray();
-
           this.loading = false;
         },
         error: (err) => {
-          console.error('ResultsComponent - Error loading results:', err);
+          console.error('Error loading results:', err);
           this.error = true;
           this.loading = false;
         }
@@ -69,16 +83,16 @@ export class ResultsComponent implements OnInit {
       return;
     }
 
-    // Get all round keys from the results
     const roundKeys = Object.keys(this.results.rounds) as RoundKey[];
-
-    // Sort the keys to ensure they're in order (round1, round2, round3, etc.)
     this.rounds = roundKeys.sort((a, b) => {
       const aNum = parseInt(a.replace('round', ''));
       const bNum = parseInt(b.replace('round', ''));
       return aNum - bNum;
     });
+  }
 
-    console.log('ResultsComponent - Updated rounds array:', this.rounds);
+  onContinue() {
+    // Navigate to dashboard since the challenge is completed
+    this.router.navigate(['/dashboard']);
   }
 }
