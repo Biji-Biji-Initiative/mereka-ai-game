@@ -55,7 +55,7 @@ export class FocusComponent implements OnInit {
 
     try {
       const challengeId = await this.challengeService.createChallenge({
-        focusArea: this.selectedFocusArea.id,
+        focusArea: this.selectedFocusArea.name,
         description: this.selectedFocusArea.description
       });
       await this.router.navigate(['/round', challengeId, 1]);

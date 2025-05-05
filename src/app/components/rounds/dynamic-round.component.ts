@@ -5,9 +5,10 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { ChallengeService } from '../../services/challenge.service';
 import { LoadingService } from '../../services/loading.service';
 import { UserService } from '../../services/user.service';
-import { RoundData } from '../../models/challenge.model';
+import { RoundData, Challenge } from '../../models/challenge.model';
 import { StateService } from '../../services/state.service';
 import { RoundGeneratorService } from '../../services/round-generator.service';
+import { RoundEvaluationService } from '../../services/round-evaluation.service';
 
 interface Metric {
   name: string;
@@ -40,6 +41,7 @@ interface Badge {
   styleUrls: ['./dynamic-round.component.scss']
 })
 export class DynamicRoundComponent implements OnInit, OnDestroy {
+  challenge: Challenge | null = null;
   currentRound: RoundData | null = null;
   userResponse = '';
   isSubmitting = false;
@@ -56,6 +58,7 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   progress: number = 0;
   timeRemaining: number = 60;
   metrics: Metric[] = [];
+  error: string | null = null;
 
   constructor(
     private challengeService: ChallengeService,
@@ -64,19 +67,84 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
     private loadingService: LoadingService,
     private userService: UserService,
     private stateService: StateService,
-    private roundGeneratorService: RoundGeneratorService
+    private roundGeneratorService: RoundGeneratorService,
+    private roundEvaluationService: RoundEvaluationService
   ) { }
 
   async ngOnInit() {
-    this.routeSubscription = this.route.params.subscribe(params => {
-      const roundNumber = parseInt(params['round'], 10);
-      if (roundNumber) {
-        this.currentRoundNumber = roundNumber;
-        this.loadCurrentRound();
-      } else {
-        this.router.navigate(['/focus']);
+    const challengeId = this.route.snapshot.paramMap.get('challengeId');
+    const roundNumber = Number(this.route.snapshot.paramMap.get('roundNumber'));
+
+    if (!challengeId || !roundNumber) {
+      this.error = 'Invalid challenge or round number';
+      this.isLoading = false;
+      return;
+    }
+
+    try {
+      // Get the challenge
+      const challenge = await this.challengeService.getChallenge(challengeId);
+      if (!challenge) {
+        this.error = 'Challenge not found';
+        this.isLoading = false;
+        return;
       }
-    });
+
+      this.challenge = challenge;
+
+      // Check if the requested round is valid
+      if (roundNumber < 1 || roundNumber > 3) {
+        this.error = 'Invalid round number';
+        this.isLoading = false;
+        return;
+      }
+
+      // If the challenge is completed, redirect to results
+      if (challenge.status === 'completed') {
+        await this.router.navigate(['/results', challengeId]);
+        return;
+      }
+
+      // If the requested round is not the current round, redirect to the current round
+      if (roundNumber !== challenge.currentRound) {
+        await this.router.navigate(['/round', challengeId, challenge.currentRound]);
+        return;
+      }
+
+      // Get or generate the current round
+      const existingRound = challenge.rounds[roundNumber - 1];
+      if (existingRound) {
+        this.currentRound = existingRound;
+      } else {
+        // Generate new round using AI
+        const generatedRound = await this.roundGeneratorService.generateRound(
+          challenge.focus.focusArea,
+          roundNumber.toString(),
+          roundNumber === 1 ? undefined : JSON.stringify({
+            previousRounds: challenge.rounds.slice(0, roundNumber - 1),
+            focus: challenge.focus
+          })
+        );
+
+        // Get the first challenge from the generated round
+        const firstChallenge = generatedRound.challenges[0];
+
+        this.currentRound = {
+          roundNumber,
+          question: firstChallenge.question,
+          answer: '',
+          aiResponse: ''
+        };
+
+        // Save the round to the challenge
+        await this.challengeService.addRound(challengeId, this.currentRound);
+      }
+    } catch (error) {
+      console.error('Error loading round:', error);
+      this.error = 'Failed to load round. Please try again.';
+    } finally {
+      this.isLoading = false;
+    }
 
     this.startTimer();
   }
@@ -102,59 +170,6 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   stopTimer() {
     if (this.timer) {
       clearInterval(this.timer);
-    }
-  }
-
-  async loadCurrentRound() {
-    this.isLoading = true;
-    try {
-      const userId = this.userService.getCurrentUserId();
-      if (!userId) throw new Error('No user ID found');
-
-      // Get the current challenge
-      const challenge = await this.challengeService.getChallenge(userId);
-      if (!challenge) {
-        this.router.navigate(['/focus']);
-        return;
-      }
-
-      // Check if we need to generate a new round
-      if (this.currentRoundNumber > challenge.rounds.length) {
-        // Generate new round based on previous rounds and focus
-        const round = await this.roundGeneratorService.generateRound(
-          userId,
-          challenge.focus.focusArea,
-          JSON.stringify({
-            previousRounds: challenge.rounds,
-            focus: challenge.focus
-          })
-        );
-
-        // Add the new round to the challenge
-        await this.challengeService.addRound(challenge.id, {
-          roundNumber: this.currentRoundNumber,
-          question: round.challenges[0].question,
-          answer: ''
-        });
-
-        // Reload the challenge to get the updated rounds
-        const updatedChallenge = await this.challengeService.getChallenge(userId);
-        if (!updatedChallenge) throw new Error('Failed to load updated challenge');
-
-        this.currentRound = updatedChallenge.rounds[this.currentRoundNumber - 1];
-      } else {
-        this.currentRound = challenge.rounds[this.currentRoundNumber - 1];
-      }
-
-      // Load previous responses if any
-      if (this.currentRound.answer) {
-        this.userResponse = this.currentRound.answer;
-      }
-    } catch (error) {
-      console.error('Error loading round:', error);
-      this.router.navigate(['/focus']);
-    } finally {
-      this.isLoading = false;
     }
   }
 

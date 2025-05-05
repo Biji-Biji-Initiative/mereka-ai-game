@@ -1,58 +1,50 @@
-<div class="container mx-auto px-4 py-8 space-y-8">
+<div class="container mx-auto px-4 py-8 max-w-4xl">
   <!-- Loading State -->
-  <div *ngIf="isLoading" class="flex justify-center items-center min-h-[50vh]">
-    <div class="text-lg text-gray-600 dark:text-gray-300">
-      Loading challenge...
+  <div *ngIf="isLoading" class="flex flex-col items-center justify-center min-h-[400px]">
+    <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+    <p class="mt-4 text-gray-600">Loading round...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error" class="flex flex-col items-center justify-center min-h-[400px]">
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 max-w-md w-full text-center">
+      <p class="text-red-600">{{error}}</p>
+      <button class="mt-4 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors"
+        (click)="ngOnInit()">
+        Try Again
+      </button>
     </div>
   </div>
 
-  <!-- Challenge Card -->
-  <div *ngIf="!isLoading && !evaluation" class="card w-full max-w-4xl mx-auto shadow-lg">
-    <!-- Card Header -->
-    <div class="card-header">
-      <h2 class="text-2xl font-bold text-primary">Round {{currentRoundNumber}}</h2>
-      <p class="text-gray-600 dark:text-gray-300">
-        {{currentRound?.question}}
-      </p>
-    </div>
-
-    <!-- Card Content -->
-    <div class="card-content space-y-6">
-      <!-- Timer and Progress -->
-      <div class="flex justify-between items-center">
-        <div class="progress-bar w-2/3">
-          <div class="h-2 bg-primary" [style.width.%]="progress"></div>
-        </div>
-        <div class="timer">
-          {{getFormattedTime()}}
-        </div>
-      </div>
-
-      <!-- Previous Round Content -->
-      <div *ngIf="previousResponses[currentRoundNumber - 1]"
-        class="border-l-4 border-primary p-4 bg-gray-50 dark:bg-gray-800">
-        <h3 class="font-semibold text-lg mb-2">Your Previous Response:</h3>
-        <p class="text-gray-800 dark:text-gray-200">
-          {{previousResponses[currentRoundNumber - 1]}}
-        </p>
-      </div>
-
-      <!-- User Response Section -->
-      <div class="space-y-3">
-        <h3 class="font-semibold text-lg">Your Response:</h3>
-        <textarea [(ngModel)]="userResponse" class="w-full min-h-[150px] p-3 border rounded-lg resize-y"
-          placeholder="Type your response here..."></textarea>
+  <!-- Round Content -->
+  <div *ngIf="!isLoading && !error && challenge && currentRound" class="space-y-8">
+    <!-- Round Header -->
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-bold">Round {{currentRound.roundNumber}} of 3</h1>
+      <div class="text-sm text-gray-500">
+        Focus Area: {{challenge.focus.focusArea}}
       </div>
     </div>
 
-    <!-- Card Footer -->
-    <div class="card-footer">
-      <button class="btn btn-outline" (click)="navigateBack()" *ngIf="currentRoundNumber === 1">
-        Back
-      </button>
-      <button class="btn btn-primary" [disabled]="isSubmitting || !userResponse.trim()" (click)="submitResponse()">
-        {{isSubmitting ? 'Submitting...' : 'Submit Response'}}
-      </button>
+    <!-- Question -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Your Challenge</h2>
+      <p class="text-gray-700 whitespace-pre-wrap">{{currentRound.question}}</p>
+    </div>
+
+    <!-- Response Form -->
+    <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-semibold mb-4">Your Response</h2>
+      <textarea [(ngModel)]="userResponse"
+        class="w-full h-48 p-4 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+        placeholder="Type your response here..."></textarea>
+      <div class="mt-4 flex justify-end">
+        <button
+          class="px-6 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          [disabled]="!userResponse.trim() || isLoading" (click)="submitResponse()">
+          {{isLoading ? 'Submitting...' : 'Submit Response'}}
+        </button>
+      </div>
     </div>
   </div>
 
