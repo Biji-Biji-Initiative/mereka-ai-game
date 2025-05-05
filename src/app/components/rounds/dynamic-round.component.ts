@@ -275,16 +275,26 @@ export class DynamicRoundComponent implements OnInit {
     const challengeId = this.route.snapshot.paramMap.get('challengeId');
     if (!challengeId) return;
 
+    // Reset component state
+    this.showQuestion = true;
+    this.showPerformance = false;
+    this.evaluation = null;
+    this.performanceMetrics = null;
+    this.userResponse = '';
+    this.isSubmitting = false;
+    this.showAiThinking = false;
+    this.error = null;
+
     if (this.currentRoundNumber === this.maxRounds) {
       this.router.navigate(['/results']);
     } else {
       // Update challenge status to next round
       await this.challengeService.updateChallengeStatus(challengeId, 'in-progress');
-      // Reset visibility for next round
-      this.showQuestion = true;
-      this.showPerformance = false;
       // Reload the component to show the next round
-      this.router.navigate(['/round', challengeId]);
+      this.router.navigate(['/round', challengeId]).then(() => {
+        // Force reload the component
+        window.location.reload();
+      });
     }
   }
 
