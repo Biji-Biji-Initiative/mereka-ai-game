@@ -30,8 +30,8 @@ export class ResultsComponent implements OnInit {
   ) { }
 
   async ngOnInit() {
-    const userId = this.userService.getCurrentUserId();
-    if (!userId) {
+    const challengeId = this.route.snapshot.paramMap.get('challengeId');
+    if (!challengeId) {
       this.error = true;
       this.loading = false;
       return;
@@ -39,7 +39,7 @@ export class ResultsComponent implements OnInit {
 
     try {
       // Get the current challenge
-      const challenge = await this.challengeService.getChallenge(userId);
+      const challenge = await this.challengeService.getChallenge(challengeId);
       if (!challenge) {
         this.error = true;
         this.loading = false;
@@ -47,10 +47,10 @@ export class ResultsComponent implements OnInit {
       }
 
       // Mark the challenge as completed
-      await this.challengeService.updateChallengeStatus(challenge.id, 'completed');
+      await this.challengeService.updateChallengeStatus(challengeId, 'completed');
 
       // Load and analyze results
-      this.loadResults(userId, challenge.id);
+      this.loadResults(challengeId);
     } catch (error) {
       console.error('Error in results initialization:', error);
       this.error = true;
@@ -58,11 +58,13 @@ export class ResultsComponent implements OnInit {
     }
   }
 
-  private loadResults(userId: string, challengeId: string) {
+  private loadResults(challengeId: string) {
     this.loading = true;
     this.error = false;
 
-    this.resultsAnalysisService.analyzeResults(userId, challengeId)
+    this.resultsAnalysisService.analyzeResults(challengeId,
+      this.userService.getCurrentUserId() || ''
+    )
       .subscribe({
         next: (results) => {
           this.results = results;

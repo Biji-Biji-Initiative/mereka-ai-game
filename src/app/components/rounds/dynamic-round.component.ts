@@ -100,7 +100,7 @@ export class DynamicRoundComponent implements OnInit {
 
       // If all rounds are completed, redirect to results
       if (this.currentRoundNumber > this.maxRounds) {
-        this.router.navigate(['/results']);
+        this.router.navigate(['/results', challengeId]);
         return;
       }
 

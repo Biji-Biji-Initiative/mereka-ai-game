@@ -77,8 +77,8 @@ export class ResultsAnalysisService {
     private roundEvaluationService: RoundEvaluationService
   ) { }
 
-  analyzeResults(userId: string, challengeId: string): Observable<FinalResults> {
-    console.log('analyzeResults called with userId:', userId, 'challengeId:', challengeId);
+  analyzeResults(challengeId: string, userId: string): Observable<FinalResults> {
+    console.log('analyzeResults called with challengeId:', challengeId);
 
     // First check if we already have a cached result
     return from(this.getCachedResults(userId, challengeId)).pipe(
@@ -93,6 +93,9 @@ export class ResultsAnalysisService {
         return from(this.fetchRoundEvaluations(userId, challengeId)).pipe(
           switchMap(evaluations => {
             console.log('Fetched round evaluations:', evaluations);
+            if (!evaluations || evaluations.length === 0) {
+              throw new Error('No round evaluations found to analyze');
+            }
             return from(this.generateFinalReport(userId, challengeId, evaluations));
           })
         );
@@ -209,13 +212,19 @@ export class ResultsAnalysisService {
 
       let finalResults: FinalResults;
       try {
-        // Try to parse the response as JSON
-        finalResults = JSON.parse(response.data.choices[0].message.content) as FinalResults;
+        // Clean the response content by removing markdown formatting
+        const cleanedContent = response.data.choices[0].message.content
+          .replace(/```json\n?/g, '')
+          .replace(/```\n?/g, '')
+          .trim();
+
+        // Try to parse the cleaned response as JSON
+        finalResults = JSON.parse(cleanedContent) as FinalResults;
         console.log('Parsed final results:', JSON.stringify(finalResults, null, 2));
       } catch (parseError) {
         console.error('Error parsing AI response:', parseError);
-        // If parsing fails, create default results
-        finalResults = this.createDefaultFinalResults(evaluations);
+        console.error('Raw content that failed to parse:', response.data.choices[0].message.content);
+        throw new Error('Failed to parse AI analysis response');
       }
 
       // Ensure the structure matches what the HTML template expects
@@ -238,7 +247,7 @@ export class ResultsAnalysisService {
       return finalResults;
     } catch (error) {
       console.error('Error generating final report:', error);
-      return this.createDefaultFinalResults(evaluations);
+      throw error; // Re-throw the error instead of returning default results
     }
   }
 

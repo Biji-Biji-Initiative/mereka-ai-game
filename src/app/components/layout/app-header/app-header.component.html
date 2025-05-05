@@ -29,12 +29,6 @@
 
       <!-- Actions -->
       <div class="flex items-center space-x-4">
-        <!-- Reset Game Button - Only show if user has started a match -->
-        <button *ngIf="hasStartedGame" (click)="resetGame()"
-          class="text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 px-3 py-1 rounded-md">
-          Reset Game
-        </button>
-
         <!-- Auth Section -->
         <ng-container *ngIf="!isAuthenticated">
           <!-- Save Progress Button - Only show if user has started the game -->
@@ -68,14 +62,14 @@
             </div>
 
             <!-- Menu Items -->
-            <a routerLink="/profile" (click)="showUserDropdown = false"
+            <!-- <a routerLink="/profile" (click)="showUserDropdown = false"
               class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
               Profile
             </a>
             <a routerLink="/settings" (click)="showUserDropdown = false"
               class="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
               Settings
-            </a>
+            </a> -->
             <button (click)="logout()"
               class="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
               Logout

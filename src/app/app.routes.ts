@@ -44,7 +44,7 @@ export const routes: Routes = [
     data: { title: 'Round' }
   },
   {
-    path: 'results',
+    path: 'results/:challengeId',
     component: ResultsComponent,
     data: { next: 'dashboard' }
   },
