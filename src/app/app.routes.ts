@@ -14,14 +14,24 @@ import { HelpComponent } from './pages/help/help.component';
 import { TournamentsComponent } from './pages/tournaments/tournaments.component';
 import { LeaderboardComponent } from './pages/leaderboard/leaderboard.component';
 import { ChallengesComponent } from './pages/challenges/challenges.component';
+import { InitialSetupGuard } from './guards/initial-setup.guard';
 
 export const routes: Routes = [
-  { path: '', component: WelcomeComponent },
-  { path: 'welcome', component: WelcomeComponent },
+  {
+    path: '',
+    component: WelcomeComponent,
+    canActivate: [InitialSetupGuard]
+  },
+  {
+    path: 'welcome',
+    component: WelcomeComponent,
+    canActivate: [InitialSetupGuard]
+  },
   {
     path: 'context',
     component: ContextComponent,
-    data: { next: 'traits' }
+    data: { next: 'traits' },
+    canActivate: [InitialSetupGuard]
   },
   {
     path: 'traits',
