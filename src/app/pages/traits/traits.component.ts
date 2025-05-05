@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { QuestionnaireComponent, Question } from '../../components/questionnaire/questionnaire.component';
-import { TraitsService, TraitsData } from '../../services/traits.service';
+import { TraitsService, TraitsData, TraitAnswer } from '../../services/traits.service';
 import { UserService } from '../../services/user.service';
 
 @Component({
@@ -14,8 +14,9 @@ import { UserService } from '../../services/user.service';
 })
 export class TraitsComponent implements OnInit {
   currentQuestionIndex = 0;
-  answers: number[] = [];
+  answers: (number | null)[] = [];
   isSubmitting = false;
+  isLoading = true;
 
   questions: Question[] = [
     {
@@ -109,12 +110,28 @@ export class TraitsComponent implements OnInit {
     this.answers = new Array(this.questions.length).fill(null);
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     // Check if user exists
     const userId = this.userService.getCurrentUserId();
     if (!userId) {
       this.router.navigate(['/context']);
       return;
+    }
+
+    try {
+      // Load saved traits data
+      const savedTraits = await this.traitsService.getTraits(userId);
+      if (savedTraits && savedTraits.answers) {
+        // Map saved answers to the current questions
+        this.answers = this.questions.map(question => {
+          const savedAnswer = savedTraits.answers.find(a => a.questionId === question.id);
+          return savedAnswer ? savedAnswer.answer : null;
+        });
+      }
+    } catch (error) {
+      console.error('Error loading saved traits:', error);
+    } finally {
+      this.isLoading = false;
     }
   }
 
@@ -138,10 +155,12 @@ export class TraitsComponent implements OnInit {
 
         // Save traits data
         const traitsData: TraitsData = {
-          answers: this.answers.map((answer, index) => ({
-            questionId: this.questions[index].id,
-            answer
-          })),
+          answers: this.answers
+            .map((answer, index) => ({
+              questionId: this.questions[index].id,
+              answer
+            }))
+            .filter(item => item.answer !== null) as TraitAnswer[],
           questions: this.questions
         };
 
