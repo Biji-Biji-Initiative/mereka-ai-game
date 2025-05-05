@@ -134,4 +134,14 @@ export class UserService extends BaseService {
     const context = localStorage.getItem('userContext');
     return context ? JSON.parse(context) : null;
   }
+
+  async getUserTraits(userId: string): Promise<TraitsData | null> {
+    const user = await this.getUser(userId);
+    return user?.traits || null;
+  }
+
+  async getUserAttitudes(userId: string): Promise<AttitudesData | null> {
+    const user = await this.getUser(userId);
+    return user?.attitudes || null;
+  }
 }
