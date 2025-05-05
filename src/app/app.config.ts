@@ -5,6 +5,8 @@ import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 import { getAuth, provideAuth } from '@angular/fire/auth';
 import { environment } from '../environments/environment';
+import { provideAnimations } from '@angular/platform-browser/animations';
+import { StateService } from './services/state.service';
 
 import { routes } from './app.routes';
 
@@ -17,6 +19,8 @@ export const appConfig: ApplicationConfig = {
       provideFirebaseApp(() => initializeApp(environment.firebase)),
       provideFirestore(() => getFirestore()),
       provideAuth(() => getAuth())
-    )
+    ),
+    provideAnimations(),
+    StateService
   ]
 };

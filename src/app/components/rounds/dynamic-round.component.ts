@@ -6,6 +6,30 @@ import { ChallengeService } from '../../services/challenge.service';
 import { LoadingService } from '../../services/loading.service';
 import { UserService } from '../../services/user.service';
 import { RoundData } from '../../models/challenge.model';
+import { StateService } from '../../services/state.service';
+
+interface Metric {
+  name: string;
+  value: number;
+  max: number;
+}
+
+interface Feedback {
+  text: string;
+  type: 'positive' | 'negative' | 'neutral';
+}
+
+interface Comparison {
+  userScore: number;
+  rivalScore: number;
+  advantage: 'user' | 'rival' | 'tie';
+  advantageReason: string;
+}
+
+interface Badge {
+  name: string;
+  description: string;
+}
 
 @Component({
   selector: 'app-dynamic-round',
@@ -28,13 +52,17 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
   timeLeft = 300;
   timer: any;
   private routeSubscription: any;
+  progress: number = 0;
+  timeRemaining: number = 60;
+  metrics: Metric[] = [];
 
   constructor(
     private challengeService: ChallengeService,
     private router: Router,
     private route: ActivatedRoute,
     private loadingService: LoadingService,
-    private userService: UserService
+    private userService: UserService,
+    private stateService: StateService
   ) { }
 
   ngOnInit() {
@@ -181,5 +209,78 @@ export class DynamicRoundComponent implements OnInit, OnDestroy {
     if (value >= 80) return 'text-green-500';
     if (value >= 60) return 'text-yellow-500';
     return 'text-red-500';
+  }
+
+  private initializeRound() {
+    this.progress = 0;
+    this.timeRemaining = 60;
+    this.metrics = [
+      { name: 'Accuracy', value: 0, max: 100 },
+      { name: 'Speed', value: 0, max: 100 },
+      { name: 'Strategy', value: 0, max: 100 }
+    ];
+    this.startTimer();
+  }
+
+  getFormattedTime(): string {
+    const minutes = Math.floor(this.timeRemaining / 60);
+    const seconds = this.timeRemaining % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  navigateBack() {
+    if (this.currentRoundNumber > 1) {
+      this.router.navigate(['/round', this.currentRoundNumber - 1]);
+    } else {
+      this.router.navigate(['/focus']);
+    }
+  }
+
+  getFeedback(): Feedback[] {
+    return [
+      { text: 'Great job on accuracy!', type: 'positive' },
+      { text: 'Try to improve your speed', type: 'negative' },
+      { text: 'Your strategy is improving', type: 'neutral' }
+    ];
+  }
+
+  getComparison(): Comparison {
+    return {
+      userScore: 75,
+      rivalScore: 65,
+      advantage: 'user',
+      advantageReason: 'Better accuracy and strategy'
+    };
+  }
+
+  getStrengths(): string[] {
+    return ['High accuracy', 'Good strategy', 'Consistent performance'];
+  }
+
+  getImprovements(): string[] {
+    return ['Increase speed', 'Better time management', 'More aggressive play'];
+  }
+
+  getBadges(): Badge[] {
+    return [
+      { name: 'Accuracy Master', description: 'Achieved 90% accuracy' },
+      { name: 'Speed Demon', description: 'Completed round in record time' }
+    ];
+  }
+
+  handleContinue() {
+    if (this.currentRoundNumber < 5) {
+      this.router.navigate(['/round', this.currentRoundNumber + 1]);
+    } else {
+      this.router.navigate(['/results']);
+    }
+  }
+
+  private handleRoundComplete() {
+    // Update metrics with final values
+    this.metrics = this.metrics.map(metric => ({
+      ...metric,
+      value: Math.floor(Math.random() * metric.max)
+    }));
   }
 }
