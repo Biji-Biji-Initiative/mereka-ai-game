@@ -58,7 +58,7 @@ export class FocusComponent implements OnInit {
         focusArea: this.selectedFocusArea.name,
         description: this.selectedFocusArea.description
       });
-      await this.router.navigate(['/round', challengeId, 1]);
+      await this.router.navigate(['/round', challengeId]);
     } catch (error) {
       console.error('Error creating challenge:', error);
       this.error = 'Failed to create challenge. Please try again.';

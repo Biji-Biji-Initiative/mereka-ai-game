@@ -17,7 +17,6 @@ export interface Challenge {
   focus: FocusData;
   rounds: RoundData[];
   description: string;
-  questions: string[];
   currentRound: number;
   status: 'pending' | 'in-progress' | 'completed';
   createdAt: Date;
@@ -75,10 +74,10 @@ export class ChallengeService extends BaseService {
         throw new Error('Challenge not found');
       }
 
-      // Get the question for this round
-      const question = challenge.questions[roundNumber - 1];
-      if (!question) {
-        throw new Error('No question found for this round');
+      // Get the question for this round from the rounds array
+      const round = challenge.rounds?.find(r => r.roundNumber === roundNumber);
+      if (!round) {
+        throw new Error('No round found for this round number');
       }
 
       // Generate AI response
@@ -89,7 +88,7 @@ export class ChallengeService extends BaseService {
         userId,
         challengeId,
         roundNumber,
-        question,
+        question: round.question,
         userResponse,
         aiResponse
       });
@@ -140,7 +139,7 @@ export class ChallengeService extends BaseService {
 
     // Get the challenge to determine the maximum number of rounds
     const challenge = await this.getChallenge(data.challengeId);
-    const maxRounds = challenge?.questions.length || 4;
+    const maxRounds = challenge?.rounds.length || 4;
     console.log(`Max rounds: ${maxRounds}`);
 
     // Determine next route
@@ -164,7 +163,7 @@ export class ChallengeService extends BaseService {
       return [];
     }
 
-    const maxRounds = challenge.questions.length;
+    const maxRounds = challenge.rounds.length;
 
     // Get all round responses
     const responses: ChallengeResponse[] = [];
@@ -187,7 +186,6 @@ export class ChallengeService extends BaseService {
       focus: focusData,
       rounds: [],
       description: focusData.description,
-      questions: [],
       currentRound: 1,
       status: 'pending',
       createdAt: new Date(),
@@ -209,8 +207,24 @@ export class ChallengeService extends BaseService {
   }
 
   async addRound(challengeId: string, roundData: RoundData): Promise<void> {
+    const challenge = await this.getChallenge(challengeId);
+    if (!challenge) throw new Error('Challenge not found');
+
+    // Get existing rounds or initialize empty array
+    const rounds = challenge.rounds || [];
+
+    // Update or add the round data
+    const roundIndex = rounds.findIndex(r => r.roundNumber === roundData.roundNumber);
+    if (roundIndex >= 0) {
+      rounds[roundIndex] = roundData;
+    } else {
+      rounds.push(roundData);
+    }
+
+    // Update the entire challenge document with the new rounds array
     await this.updateDocument(this.COLLECTION_NAME, challengeId, {
-      [`rounds.${roundData.roundNumber}`]: roundData
+      rounds: rounds,
+      updatedAt: new Date()
     });
   }
 
@@ -244,15 +258,16 @@ export class ChallengeService extends BaseService {
     if (!challenge) {
       throw new Error('Challenge not found');
     }
-
+    console.log('Challenge:', challenge);
     // Get the current round number from the challenge
     const currentRound = challenge.currentRound;
     console.log('Current round:', currentRound);
 
-    // Validate that we have a question for this round
-    if (!challenge.questions || !challenge.questions[currentRound - 1]) {
-      console.error('No question found for round:', currentRound);
-      throw new Error('No question found for this round');
+    // Get the current round data
+    const currentRoundData = challenge.rounds?.find(r => r.roundNumber === currentRound);
+    if (!currentRoundData) {
+      console.error('No round data found for round:', currentRound);
+      throw new Error('No round data found for this round');
     }
 
     // Generate AI response
@@ -264,7 +279,7 @@ export class ChallengeService extends BaseService {
     // Create round data
     const roundData: RoundData = {
       roundNumber: currentRound,
-      question: challenge.questions[currentRound - 1],
+      question: currentRoundData.question,
       answer: response,
       aiResponse,
       evaluation
@@ -294,18 +309,11 @@ export class ChallengeService extends BaseService {
       response,
       aiResponse,
       evaluation,
-      question: challenge.questions[currentRound - 1]
+      question: currentRoundData.question
     };
 
     // Save the response
     await this.saveResponse(challengeResponse);
-
-    // Update user's route if needed
-    const userId = this.userService.getCurrentUserId();
-    if (userId) {
-      const maxRounds = challenge.questions.length;
-      const nextRoute = currentRound < maxRounds ? `/round/${currentRound + 1}` : '/results';
-    }
 
     return challengeResponse;
   }

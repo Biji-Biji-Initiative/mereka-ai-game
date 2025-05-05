@@ -47,7 +47,7 @@ interface CloudFunctionResponse {
 })
 export class FocusAreaGeneratorService {
   private readonly API_URL = `${environment.apiUrl}/processRequest`;
-  private readonly TIMEOUT_MS = 30000; // 30 seconds timeout
+  private readonly TIMEOUT_MS = 300000; // 30 seconds timeout
 
   constructor(
     private http: HttpClient,
@@ -202,9 +202,9 @@ export class FocusAreaGeneratorService {
     // Return the complete request
     return {
       type: 'generateFocusAreas',
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [systemMessage, userMessage],
-      temperature: 0.7
+      temperature: 0.5
     };
   }
 
