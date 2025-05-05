@@ -221,6 +221,11 @@ export class ResultsAnalysisService {
         // Try to parse the cleaned response as JSON
         finalResults = JSON.parse(cleanedContent) as FinalResults;
         console.log('Parsed final results:', JSON.stringify(finalResults, null, 2));
+
+        // Round the overallScore to 2 decimal places
+        if (typeof finalResults.overallScore === 'number') {
+          finalResults.overallScore = Number(finalResults.overallScore.toFixed(2));
+        }
       } catch (parseError) {
         console.error('Error parsing AI response:', parseError);
         console.error('Raw content that failed to parse:', response.data.choices[0].message.content);
