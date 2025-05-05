@@ -35,4 +35,11 @@ export interface User {
       };
     };
   };
+  challenges?: Array<{
+    id: string;
+    title: string;
+    focusArea: string;
+    score: number;
+    date: Date;
+  }>;
 }
