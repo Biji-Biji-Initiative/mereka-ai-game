@@ -97,6 +97,7 @@ export class DynamicRoundComponent implements OnInit {
       // Determine current round based on completed rounds
       const completedRounds = rounds.filter((round: RoundData) => round && round.evaluation);
       this.currentRoundNumber = completedRounds.length + 1;
+      this.roundNumber = this.currentRoundNumber; // Keep these in sync
 
       // If all rounds are completed, redirect to results
       if (this.currentRoundNumber > this.maxRounds) {
@@ -114,6 +115,8 @@ export class DynamicRoundComponent implements OnInit {
           // Find the first incomplete round
           const incompleteRoundIndex = rounds.findIndex(round => !round || !round.evaluation);
           if (incompleteRoundIndex !== -1) {
+            this.currentRoundNumber = incompleteRoundIndex + 1;
+            this.roundNumber = this.currentRoundNumber;
             this.router.navigate(['/round', challengeId]);
             return;
           }
@@ -298,24 +301,11 @@ export class DynamicRoundComponent implements OnInit {
     this.showAiThinking = false;
     this.error = null;
 
-    if (this.currentRoundNumber === this.maxRounds) {
-      this.router.navigate(['/results']);
-    } else {
-      // Update challenge status to next round
-      await this.challengeService.updateChallengeStatus(challengeId, 'in-progress');
-      // Reload the component to show the next round
-      this.router.navigate(['/round', challengeId]).then(() => {
-        // Force reload the component
-        window.location.reload();
-      });
-    }
-  }
-
-  private handleRoundComplete() {
-    // Update metrics with final values
-    this.metrics = this.metrics.map(metric => ({
-      ...metric,
-      value: Math.floor(Math.random() * metric.max)
-    }));
+    // Update challenge status to next round
+    await this.challengeService.updateChallengeStatus(challengeId, 'in-progress');
+    // Navigate to the next round
+    this.router.navigate(['/round', challengeId]).then(() => {
+      this.loadRound();
+    });
   }
 }
