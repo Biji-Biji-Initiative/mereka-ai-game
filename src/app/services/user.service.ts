@@ -1,8 +1,9 @@
 import { Injectable } from '@angular/core';
+import { AngularFirestore } from '@angular/fire/compat/firestore';
+import { Observable, from, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
+import { User, UserContext, TraitAnswer, TraitsData, AttitudeAnswer, AttitudesData } from '../models/user.model';
 import { BaseService } from './base.service';
-import { User, UserContext } from '../models/user.model';
-import { TraitAnswer, TraitsData } from './traits.service';
-import { AttitudeAnswer, AttitudesData } from './attitudes.service';
 
 @Injectable({
   providedIn: 'root'
