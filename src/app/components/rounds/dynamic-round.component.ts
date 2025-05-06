@@ -262,17 +262,6 @@ export class DynamicRoundComponent implements OnInit {
     return this.performanceMetrics?.badges || [];
   }
 
-  private initializeRound() {
-    this.progress = 0;
-    this.timeRemaining = 60;
-    this.metrics = [
-      { name: 'Accuracy', value: 0, max: 100 },
-      { name: 'Speed', value: 0, max: 100 },
-      { name: 'Strategy', value: 0, max: 100 }
-    ];
-    this.startTimer();
-  }
-
   getFormattedTime(): string {
     const minutes = Math.floor(this.timeRemaining / 60);
     const seconds = this.timeRemaining % 60;
@@ -292,6 +281,7 @@ export class DynamicRoundComponent implements OnInit {
     if (!challengeId) return;
 
     // Reset component state
+    this.isLoading = true;
     this.showQuestion = true;
     this.showPerformance = false;
     this.evaluation = null;
