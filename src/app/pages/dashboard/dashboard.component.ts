@@ -40,6 +40,12 @@ interface DashboardData {
   badges: Badge[];
   insights: string[];
   recommendations: string[];
+  lastRound: {
+    title: string;
+    focusArea: string;
+    score: number;
+    date: Date;
+  } | null;
 }
 
 @Component({
@@ -60,7 +66,8 @@ export class DashboardComponent implements OnInit {
     recentChallenges: [],
     badges: [],
     insights: [],
-    recommendations: []
+    recommendations: [],
+    lastRound: null
   };
 
   userContext: UserContext | null = null;
@@ -185,6 +192,7 @@ export class DashboardComponent implements OnInit {
       let totalRounds = 0;
       let skillLevels: Record<string, number> = {};
       let recentChallenges: any[] = [];
+      let lastRound: any = null;
 
       finalReportsSnapshot.forEach(doc => {
         const data = doc.data() as FinalResults;
@@ -219,12 +227,18 @@ export class DashboardComponent implements OnInit {
           });
 
           // Add to recent challenges
-          recentChallenges.push({
+          const challenge = {
             title: data.focusArea?.name || 'Challenge',
             score: Math.round(roundScores.reduce((sum, score) => sum + score, 0) / roundScores.length),
             focusArea: data.focusArea?.name || 'General',
             date: doc.data()['timestamp'] || new Date()
-          });
+          };
+          recentChallenges.push(challenge);
+
+          // Set as last round if it's the most recent
+          if (!lastRound || challenge.date > lastRound.date) {
+            lastRound = challenge;
+          }
         }
       });
 
@@ -247,20 +261,17 @@ export class DashboardComponent implements OnInit {
         skillLevels: this.transformSkillLevels(skillLevels),
         recentChallenges: this.transformChallenges(recentChallenges),
         badges: this.transformBadges(allBadges),
-        insights: allInsights.length > 0 ? allInsights : [
-          'Your performance shows potential for growth.',
-          'Consistency across rounds is important for improvement.',
-          'Consider the feedback from each round to enhance your approach.'
-        ],
-        recommendations: allRecommendations.length > 0 ? allRecommendations : [
-          'Practice responding to similar challenges to build your skills.',
-          'Take time to reflect on your performance after each round.',
-          'Focus on the areas identified for improvement in future challenges.'
-        ]
+        insights: allInsights.length > 0 ? allInsights : ['No insights available yet'],
+        recommendations: allRecommendations.length > 0 ? allRecommendations : ['No recommendations available yet'],
+        lastRound: lastRound ? {
+          title: lastRound.title,
+          focusArea: lastRound.focusArea,
+          score: lastRound.score,
+          date: lastRound.date
+        } : null
       };
     } catch (error) {
       console.error('Error loading dashboard data:', error);
-      // Handle error appropriately
     } finally {
       this.loadingService.hide();
     }
@@ -275,10 +286,33 @@ export class DashboardComponent implements OnInit {
   }
 
   private transformChallenges(challenges: any[]): Challenge[] {
-    return challenges.map(challenge => ({
-      ...challenge,
-      date: new Date(challenge.date)
-    }));
+    console.log('Raw challenges:', challenges); // Debug log
+
+    // Remove duplicates and sort by date
+    const uniqueChallenges = challenges.reduce((acc, challenge: any) => {
+      const key = `${challenge.title}-${challenge.focusArea}-${challenge.date}`;
+      console.log('Processing challenge:', challenge, 'Key:', key); // Debug log
+
+      if (!acc.has(key)) {
+        acc.set(key, challenge);
+      } else {
+        console.log('Duplicate found:', key); // Debug log
+      }
+      return acc;
+    }, new Map());
+
+    const transformedChallenges = Array.from(uniqueChallenges.values())
+      .map((challenge: any) => ({
+        title: challenge.title,
+        score: challenge.score || 0,
+        focusArea: challenge.focusArea,
+        date: challenge.date instanceof Date ? challenge.date : new Date(challenge.date)
+      }))
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, 5); // Show only the 5 most recent challenges
+
+    console.log('Transformed challenges:', transformedChallenges); // Debug log
+    return transformedChallenges;
   }
 
   private transformBadges(badges: any[]): Badge[] {
@@ -319,10 +353,23 @@ export class DashboardComponent implements OnInit {
   }
 
   formatDate(date: Date): string {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
+    if (!date) return '';
+    const now = new Date();
+    const diffTime = Math.abs(now.getTime() - date.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+
+    return date.toLocaleDateString('en-US', {
       month: 'short',
-      day: 'numeric'
-    }).format(date);
+      day: 'numeric',
+      year: 'numeric'
+    });
+  }
+
+  trackByChallenge(index: number, challenge: Challenge): string {
+    return `${challenge.title}-${challenge.focusArea}-${challenge.date.getTime()}`;
   }
 }
