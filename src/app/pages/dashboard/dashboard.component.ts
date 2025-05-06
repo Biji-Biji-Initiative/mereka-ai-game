@@ -79,8 +79,8 @@ export class DashboardComponent implements OnInit {
   ) { }
 
   async ngOnInit(): Promise<void> {
-    await this.loadUserProfile();
     this.loadDashboardData();
+    await this.loadUserProfile();
   }
 
   private async loadUserProfile(): Promise<void> {
@@ -183,36 +183,69 @@ export class DashboardComponent implements OnInit {
       let allRecommendations: string[] = [];
       let totalScore = 0;
       let totalRounds = 0;
+      let skillLevels: Record<string, number> = {};
+      let recentChallenges: any[] = [];
 
       finalReportsSnapshot.forEach(doc => {
         const data = doc.data() as FinalResults;
+
+        // Process badges
         if (data.badges) {
           allBadges = [...allBadges, ...data.badges];
         }
+
+        // Process insights and recommendations
         if (data.insights) {
           allInsights = [...allInsights, ...data.insights];
         }
         if (data.recommendations) {
           allRecommendations = [...allRecommendations, ...data.recommendations];
         }
+
+        // Process rounds and calculate scores
         if (data.rounds) {
           const roundScores = Object.values(data.rounds).map(round => round.score);
           totalScore += roundScores.reduce((sum, score) => sum + score, 0);
           totalRounds += roundScores.length;
+
+          // Process skill levels from rounds
+          Object.values(data.rounds).forEach(round => {
+            if (round.strengths) {
+              round.strengths.forEach(strength => {
+                const skillName = strength.toLowerCase().replace(/\s+/g, '-');
+                skillLevels[skillName] = (skillLevels[skillName] || 0) + 1;
+              });
+            }
+          });
+
+          // Add to recent challenges
+          recentChallenges.push({
+            title: data.focusArea?.name || 'Challenge',
+            score: Math.round(roundScores.reduce((sum, score) => sum + score, 0) / roundScores.length),
+            focusArea: data.focusArea?.name || 'General',
+            date: doc.data()['timestamp'] || new Date()
+          });
         }
       });
 
       // Calculate average score
       const averageScore = totalRounds > 0 ? totalScore / totalRounds : 0;
 
-      // Get the base dashboard data
-      const baseData = await this.gameService.getDashboardData();
+      // Calculate level based on completed challenges and average score
+      const level = Math.floor(completedChallenges / 5) + 1; // Level up every 5 challenges
 
-      // Transform and combine the data
+      // Calculate streak days (placeholder - you might want to implement actual streak logic)
+      const streakDays = Math.min(completedChallenges, 7); // Max 7 days for now
+
+      // Transform and set the dashboard data
       this.dashboardData = {
-        ...baseData,
-        skillLevels: this.transformSkillLevels(baseData.skillLevels),
-        recentChallenges: this.transformChallenges(baseData.recentChallenges),
+        level,
+        overallProgress: Math.round((averageScore / 100) * 100),
+        challengesCompleted: completedChallenges,
+        totalBadges: allBadges.length,
+        streakDays,
+        skillLevels: this.transformSkillLevels(skillLevels),
+        recentChallenges: this.transformChallenges(recentChallenges),
         badges: this.transformBadges(allBadges),
         insights: allInsights.length > 0 ? allInsights : [
           'Your performance shows potential for growth.',
@@ -223,11 +256,7 @@ export class DashboardComponent implements OnInit {
           'Practice responding to similar challenges to build your skills.',
           'Take time to reflect on your performance after each round.',
           'Focus on the areas identified for improvement in future challenges.'
-        ],
-        overallProgress: Math.round((averageScore / 100) * 100),
-        challengesCompleted: completedChallenges,
-        totalBadges: allBadges.length,
-        streakDays: baseData.streakDays || 0
+        ]
       };
     } catch (error) {
       console.error('Error loading dashboard data:', error);
