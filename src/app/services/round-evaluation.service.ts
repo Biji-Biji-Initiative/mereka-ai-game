@@ -115,7 +115,22 @@ export class RoundEvaluationService {
       return evaluationResponse;
     } catch (error) {
       console.error('Error evaluating response:', error);
-      return this.createDefaultEvaluation(request);
+
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('User profile not found')) {
+          throw new Error('Unable to evaluate response: User profile not found. Please try again.');
+        } else if (error.message.includes('Invalid evaluation response structure')) {
+          throw new Error('Unable to evaluate response: Invalid evaluation format received. Please try again.');
+        } else if (error.message.includes('No valid response from evaluation service')) {
+          throw new Error('Unable to evaluate response: Evaluation service is currently unavailable. Please try again later.');
+        } else if (error.message.includes('Invalid evaluation response format')) {
+          throw new Error('Unable to evaluate response: Invalid response format. Please try again.');
+        }
+      }
+
+      // For any other errors, throw a generic error
+      throw new Error('An unexpected error occurred while evaluating your response. Please try again later.');
     }
   }
 
