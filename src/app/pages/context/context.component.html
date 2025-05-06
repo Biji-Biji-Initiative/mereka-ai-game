@@ -72,7 +72,7 @@
                     </div>
 
                     <!-- Location -->
-                    <div>
+                    <div class="relative">
                         <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Location
                         </label>
@@ -84,6 +84,17 @@
                             <span *ngIf="formControls['location'].errors?.['required']">Location is required</span>
                             <span *ngIf="formControls['location'].errors?.['minlength']">Location must be at least 2
                                 characters</span>
+                        </div>
+
+                        <!-- Location Suggestions Dropdown -->
+                        <div *ngIf="showSuggestions && locationSuggestions.length > 0"
+                            class="absolute z-10 mt-1 w-full bg-white dark:bg-gray-800 shadow-lg rounded-md max-h-60 overflow-auto">
+                            <ul class="py-1">
+                                <li *ngFor="let suggestion of locationSuggestions" (click)="selectLocation(suggestion)"
+                                    class="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer text-gray-900 dark:text-white">
+                                    {{ suggestion.description }}
+                                </li>
+                            </ul>
                         </div>
                     </div>
 

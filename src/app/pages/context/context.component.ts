@@ -1,8 +1,10 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { UserService } from '../../services/user.service';
+import { GoogleMapsService } from '../../services/google-maps.service';
+import { debounceTime, distinctUntilChanged, switchMap } from 'rxjs/operators';
 
 @Component({
   selector: 'app-context',
@@ -11,14 +13,17 @@ import { UserService } from '../../services/user.service';
   templateUrl: './context.component.html',
   styleUrl: './context.component.scss'
 })
-export class ContextComponent {
+export class ContextComponent implements OnInit {
   contextForm: FormGroup;
   isSubmitting = false;
+  locationSuggestions: any[] = [];
+  showSuggestions = false;
 
   constructor(
     private router: Router,
     private route: ActivatedRoute,
     private userService: UserService,
+    private googleMapsService: GoogleMapsService,
     private fb: FormBuilder
   ) {
     this.contextForm = this.fb.group({
@@ -29,8 +34,32 @@ export class ContextComponent {
     });
   }
 
+  ngOnInit() {
+    this.setupLocationAutocomplete();
+  }
+
+  private setupLocationAutocomplete() {
+    this.contextForm.get('location')?.valueChanges
+      .pipe(
+        debounceTime(300),
+        distinctUntilChanged(),
+        switchMap(value => this.googleMapsService.getPlacePredictions(value))
+      )
+      .subscribe(predictions => {
+        this.locationSuggestions = predictions;
+        this.showSuggestions = predictions.length > 0;
+      });
+  }
+
   get formControls() {
     return this.contextForm.controls;
+  }
+
+  selectLocation(suggestion: any) {
+    this.showSuggestions = false;
+    this.contextForm.patchValue({
+      location: suggestion.description
+    }, { emitEvent: false });
   }
 
   async onSubmit() {
