@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { TraitsService } from './traits.service';
-import { AttitudesService } from './attitudes.service';
 import { UserService } from './user.service';
 import { CloudFunctionPayload, exampleCloudFunctionPayload } from '../models/cloud-function-payload.model';
 import { Observable, of, throwError } from 'rxjs';
@@ -88,16 +86,12 @@ export class RoundEvaluationService {
 
   constructor(
     private http: HttpClient,
-    private traitsService: TraitsService,
-    private attitudesService: AttitudesService,
     private userService: UserService
   ) { }
 
   async evaluateResponse(request: EvaluationRequest): Promise<EvaluationResponse> {
     try {
       // Get user traits and attitudes
-      const traits = await this.traitsService.getTraits(request.userId);
-      const attitudes = await this.attitudesService.getAttitudes(request.userId);
       const userProfile = await this.userService.getUser(request.userId);
 
       if (!userProfile) {
@@ -105,7 +99,7 @@ export class RoundEvaluationService {
       }
 
       // Create a structured request for the cloud function
-      const simpleRequest = this.createSimpleRequest(request, traits, attitudes, userProfile);
+      const simpleRequest = this.createSimpleRequest(request, userProfile);
 
       // Call the cloud function with retry logic and timeout
       const evaluationResponse = await this.callCloudFunctionWithRetry(simpleRequest);
@@ -276,13 +270,8 @@ export class RoundEvaluationService {
 
   private createSimpleRequest(
     request: EvaluationRequest,
-    traits: any,
-    attitudes: any,
     userProfile: any
   ): any {
-    // Create a summary of the user's traits and attitudes
-    const traitsSummary = this.summarizeTraitsAndAttitudes(traits, attitudes);
-
     // Create the system message
     const systemMessage = {
       role: 'system',
@@ -295,7 +284,6 @@ export class RoundEvaluationService {
       4. The AI's response for comparison is: ${request.aiResponse}
       5. Use the following information about the user to personalize the evaluation:
          - User Profile: ${JSON.stringify(userProfile)}
-         - Traits Summary: ${traitsSummary}
       6. Your response MUST be a JSON object with the following structure:
          {
            "metrics": {
@@ -334,38 +322,6 @@ export class RoundEvaluationService {
       messages: [systemMessage, userMessage],
       temperature: 0.4
     };
-  }
-
-  private summarizeTraitsAndAttitudes(traits: any, attitudes: any): string {
-    if (!traits || !attitudes) {
-      return "No traits or attitudes data available.";
-    }
-
-    // Summarize traits
-    let traitsSummary = "Traits: ";
-    if (traits.answers && traits.answers.length > 0) {
-      const traitScores = traits.answers.map((answer: any) => {
-        const question = traits.questions.find((q: any) => q.id === answer.questionId);
-        return `${question ? question.text : 'Unknown trait'}: ${answer.answer}/5`;
-      });
-      traitsSummary += traitScores.join(', ');
-    } else {
-      traitsSummary += "No trait answers available.";
-    }
-
-    // Summarize attitudes
-    let attitudesSummary = "Attitudes: ";
-    if (attitudes.answers && attitudes.answers.length > 0) {
-      const attitudeScores = attitudes.answers.map((answer: any) => {
-        const question = attitudes.questions.find((q: any) => q.id === answer.questionId);
-        return `${question ? question.text : 'Unknown attitude'}: ${answer.answer}/5`;
-      });
-      attitudesSummary += attitudeScores.join(', ');
-    } else {
-      attitudesSummary += "No attitude answers available.";
-    }
-
-    return `${traitsSummary}. ${attitudesSummary}`;
   }
 
   private createDefaultEvaluation(request: EvaluationRequest): EvaluationResponse {

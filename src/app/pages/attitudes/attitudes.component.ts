@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { QuestionnaireComponent, Question } from '../../components/questionnaire/questionnaire.component';
-import { AttitudesService, AttitudesData, AttitudeAnswer } from '../../services/attitudes.service';
 import { UserService } from '../../services/user.service';
+import { AttitudesData, AttitudeAnswer } from '../../models/user.model';
 
 @Component({
   selector: 'app-attitudes',
@@ -21,82 +21,82 @@ export class AttitudesComponent implements OnInit {
   questions: Question[] = [
     {
       id: 1,
-      title: 'How much do you trust AI systems with important tasks?',
-      subtitle: 'AI Trust Assessment',
+      title: 'How do you feel about working with AI?',
+      subtitle: 'AI Attitude Assessment',
       type: 'rating',
       options: {
         min: 1,
         max: 5,
-        minLabel: 'Highly skeptical',
-        maxLabel: 'Completely trust'
+        minLabel: 'Very uncomfortable',
+        maxLabel: 'Very comfortable'
       },
       about: {
-        title: 'About AI Trust',
-        description: 'Your level of confidence in AI\'s reliability and safety.'
+        title: 'About AI collaboration',
+        description: 'Your comfort level with AI-assisted work environments.'
       }
     },
     {
       id: 2,
-      title: 'How concerned are you about AI\'s impact on jobs?',
-      subtitle: 'AI Impact Assessment',
+      title: 'How do you view the role of AI in decision-making?',
+      subtitle: 'Decision-making Assessment',
       type: 'rating',
       options: {
         min: 1,
         max: 5,
-        minLabel: 'Not concerned',
-        maxLabel: 'Extremely concerned'
+        minLabel: 'Supportive role only',
+        maxLabel: 'Equal partnership'
       },
       about: {
-        title: 'About AI Impact',
-        description: 'Your level of worry about AI replacing human roles.'
+        title: 'About AI decision-making',
+        description: 'Your perspective on AI\'s role in decision-making processes.'
       }
     },
     {
       id: 3,
-      title: 'How much do you believe AI will improve humanity\'s future?',
-      subtitle: 'AI Optimism Assessment',
+      title: 'How do you feel about AI replacing human tasks?',
+      subtitle: 'Task Automation Assessment',
       type: 'rating',
       options: {
         min: 1,
         max: 5,
-        minLabel: 'Pessimistic',
+        minLabel: 'Very concerned',
         maxLabel: 'Very optimistic'
       },
       about: {
-        title: 'About AI Optimism',
-        description: 'Your optimism about AI\'s positive effects on society.'
+        title: 'About task automation',
+        description: 'Your attitude towards AI automating human tasks.'
       }
     },
     {
       id: 4,
-      title: 'How comfortable are you working with AI tools?',
-      subtitle: 'AI Collaboration Assessment',
+      title: 'How do you view AI in terms of ethics?',
+      subtitle: 'Ethical Assessment',
       type: 'rating',
       options: {
         min: 1,
         max: 5,
-        minLabel: 'Uncomfortable',
-        maxLabel: 'Very comfortable'
+        minLabel: 'Major concerns',
+        maxLabel: 'Minor concerns'
       },
       about: {
-        title: 'About AI Collaboration',
-        description: 'Your openness to collaborating with AI in your work.'
+        title: 'About AI ethics',
+        description: 'Your perspective on ethical considerations in AI.'
       }
     },
     {
       id: 5,
-      title: 'How much autonomy should AI systems have?',
-      subtitle: 'AI Autonomy Assessment',
+      title: 'How do you feel about AI learning from human behavior?',
+      subtitle: 'Learning Assessment',
       type: 'rating',
       options: {
         min: 1,
         max: 5,
-        minLabel: 'Always human oversight',
-        maxLabel: 'Full autonomy when appropriate'
+        minLabel: 'Very cautious',
+        maxLabel: 'Very supportive'
       },
       about: {
-        title: 'About AI Autonomy',
-        description: 'Your view on AI\'s independence in decision-making.'
+        title: 'About AI learning',
+        description: 'Your attitude towards AI learning from human behavior.'
       }
     }
   ];
@@ -104,7 +104,6 @@ export class AttitudesComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private attitudesService: AttitudesService,
     private userService: UserService
   ) {
     this.answers = new Array(this.questions.length).fill(null);
@@ -120,11 +119,11 @@ export class AttitudesComponent implements OnInit {
 
     try {
       // Load saved attitudes data
-      const savedAttitudes = await this.attitudesService.getAttitudes(userId);
+      const savedAttitudes = await this.userService.getUserAttitudes(userId);
       if (savedAttitudes && savedAttitudes.answers) {
         // Map saved answers to the current questions
         this.answers = this.questions.map(question => {
-          const savedAnswer = savedAttitudes.answers.find(a => a.questionId === question.id);
+          const savedAnswer = savedAttitudes.answers.find((a: AttitudeAnswer) => a.questionId === question.id);
           return savedAnswer ? savedAnswer.answer : null;
         });
       }
@@ -164,7 +163,7 @@ export class AttitudesComponent implements OnInit {
           questions: this.questions
         };
 
-        await this.attitudesService.saveAttitudes(userId, attitudesData);
+        await this.userService.updateUserAttitudes(userId, attitudesData);
 
         // Navigate to next route
         const nextRoute = this.route.snapshot.data['next'];

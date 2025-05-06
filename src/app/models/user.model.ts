@@ -1,5 +1,22 @@
-import { TraitAnswer, TraitsData } from '../services/traits.service';
-import { AttitudeAnswer, AttitudesData } from '../services/attitudes.service';
+export interface TraitAnswer {
+  questionId: number;
+  answer: number;
+}
+
+export interface TraitsData {
+  answers: TraitAnswer[];
+  questions: any[];
+}
+
+export interface AttitudeAnswer {
+  questionId: number;
+  answer: number;
+}
+
+export interface AttitudesData {
+  answers: AttitudeAnswer[];
+  questions: any[];
+}
 
 export interface UserContext {
   name: string;

@@ -1,7 +1,5 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { TraitsService } from './traits.service';
-import { AttitudesService } from './attitudes.service';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
 import { CloudFunctionPayload, exampleCloudFunctionPayload } from '../models/cloud-function-payload.model';
@@ -107,18 +105,12 @@ export class RoundGeneratorService {
 
   constructor(
     private http: HttpClient,
-    private traitsService: TraitsService,
-    private attitudesService: AttitudesService,
     private userService: UserService
   ) { }
 
   async generateRound(userId: string, focusType: string, context?: string, previousRounds?: any[]): Promise<RoundResponse> {
     try {
       // Fetch user data from the database
-      const traitsData = await this.traitsService.getTraits(userId);
-      const attitudesData = await this.attitudesService.getAttitudes(userId);
-
-      // Get user profile data
       const userProfile = await this.userService.getUser(userId);
 
       // Prepare the request payload
@@ -126,8 +118,8 @@ export class RoundGeneratorService {
         userId,
         focusType,
         context: context || `Generate a challenge focused on ${focusType}`,
-        traits: traitsData || exampleCloudFunctionPayload.traits,
-        attitudes: attitudesData || exampleCloudFunctionPayload.attitudes,
+        traits: exampleCloudFunctionPayload.traits,
+        attitudes: exampleCloudFunctionPayload.attitudes,
         userProfile: userProfile || exampleCloudFunctionPayload.userProfile,
         options: exampleCloudFunctionPayload.options,
         previousRounds: previousRounds || []

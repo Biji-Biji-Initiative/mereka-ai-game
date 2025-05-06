@@ -2,8 +2,8 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, ActivatedRoute } from '@angular/router';
 import { QuestionnaireComponent, Question } from '../../components/questionnaire/questionnaire.component';
-import { TraitsService, TraitsData, TraitAnswer } from '../../services/traits.service';
 import { UserService } from '../../services/user.service';
+import { TraitsData, TraitAnswer } from '../../models/user.model';
 
 @Component({
   selector: 'app-traits',
@@ -104,7 +104,6 @@ export class TraitsComponent implements OnInit {
   constructor(
     private router: Router,
     private route: ActivatedRoute,
-    private traitsService: TraitsService,
     private userService: UserService
   ) {
     this.answers = new Array(this.questions.length).fill(null);
@@ -120,11 +119,11 @@ export class TraitsComponent implements OnInit {
 
     try {
       // Load saved traits data
-      const savedTraits = await this.traitsService.getTraits(userId);
+      const savedTraits = await this.userService.getUserTraits(userId);
       if (savedTraits && savedTraits.answers) {
         // Map saved answers to the current questions
         this.answers = this.questions.map(question => {
-          const savedAnswer = savedTraits.answers.find(a => a.questionId === question.id);
+          const savedAnswer = savedTraits.answers.find((a: TraitAnswer) => a.questionId === question.id);
           return savedAnswer ? savedAnswer.answer : null;
         });
       }
@@ -164,7 +163,7 @@ export class TraitsComponent implements OnInit {
           questions: this.questions
         };
 
-        await this.traitsService.saveTraits(userId, traitsData);
+        await this.userService.updateUserTraits(userId, traitsData);
 
         // Navigate to next route
         const nextRoute = this.route.snapshot.data['next'];

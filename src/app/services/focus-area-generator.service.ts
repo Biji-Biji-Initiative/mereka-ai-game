@@ -1,8 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '../../environments/environment';
-import { TraitsService } from './traits.service';
-import { AttitudesService } from './attitudes.service';
 import { UserService } from './user.service';
 import { User } from '../models/user.model';
 import { Observable, throwError } from 'rxjs';
@@ -51,8 +49,6 @@ export class FocusAreaGeneratorService {
 
   constructor(
     private http: HttpClient,
-    private traitsService: TraitsService,
-    private attitudesService: AttitudesService,
     private userService: UserService
   ) { }
 
@@ -61,13 +57,11 @@ export class FocusAreaGeneratorService {
     if (!userId) throw new Error('No user ID found');
 
     // Get user's traits, attitudes, and details
-    const traits = await this.traitsService.getTraits(userId);
-    const attitudes = await this.attitudesService.getAttitudes(userId);
     const user = await this.userService.getUser(userId);
     if (!user) throw new Error('User not found');
 
     // Create a structured request for the cloud function
-    const request = this.createStructuredRequest(user, traits, attitudes);
+    const request = this.createStructuredRequest(user);
 
     try {
       // Call the cloud function with timeout
@@ -117,10 +111,7 @@ export class FocusAreaGeneratorService {
     }
   }
 
-  private createStructuredRequest(user: User, traits: any, attitudes: any): any {
-    // Create a summary of the user's traits and attitudes
-    const traitsSummary = this.summarizeTraitsAndAttitudes(traits, attitudes);
-
+  private createStructuredRequest(user: User): any {
     // Create the system message
     const systemMessage = {
       role: 'system',
@@ -134,7 +125,6 @@ export class FocusAreaGeneratorService {
         professionalTitle: user.professionalTitle,
         location: user.location
       })}
-         - Traits Summary: ${traitsSummary}
       3. Each focus area should:
          - Align with the user's strengths, interests, and professional background
          - Present a unique challenge that tests different aspects of human-AI interaction
@@ -206,38 +196,6 @@ export class FocusAreaGeneratorService {
       messages: [systemMessage, userMessage],
       temperature: 0.5
     };
-  }
-
-  private summarizeTraitsAndAttitudes(traits: any, attitudes: any): string {
-    if (!traits || !attitudes) {
-      return "No traits or attitudes data available.";
-    }
-
-    // Summarize traits
-    let traitsSummary = "Traits: ";
-    if (traits.answers && traits.answers.length > 0) {
-      const traitScores = traits.answers.map((answer: any) => {
-        const question = traits.questions.find((q: any) => q.id === answer.questionId);
-        return `${question ? question.text : 'Unknown trait'}: ${answer.answer}/5`;
-      });
-      traitsSummary += traitScores.join(', ');
-    } else {
-      traitsSummary += "No trait answers available.";
-    }
-
-    // Summarize attitudes
-    let attitudesSummary = "Attitudes: ";
-    if (attitudes.answers && attitudes.answers.length > 0) {
-      const attitudeScores = attitudes.answers.map((answer: any) => {
-        const question = attitudes.questions.find((q: any) => q.id === answer.questionId);
-        return `${question ? question.text : 'Unknown attitude'}: ${answer.answer}/5`;
-      });
-      attitudesSummary += attitudeScores.join(', ');
-    } else {
-      attitudesSummary += "No attitude answers available.";
-    }
-
-    return `${traitsSummary}. ${attitudesSummary}`;
   }
 
   private isValidFocusAreas(focusAreas: any): boolean {
