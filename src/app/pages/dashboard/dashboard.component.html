@@ -117,7 +117,7 @@
   </div>
 
   <!-- Recommendations Section -->
-  <div class="bg-white rounded-lg shadow-lg p-6">
+  <div class="bg-white rounded-lg shadow-lg p-6 mb-8">
     <h2 class="text-2xl font-bold text-gray-900 mb-6">Recommendations</h2>
     <div class="space-y-4">
       <div *ngFor="let recommendation of dashboardData.recommendations" class="flex items-start">
@@ -128,6 +128,76 @@
           </svg>
         </div>
         <p class="ml-3 text-gray-700">{{ recommendation }}</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Profile Section -->
+  <div class="bg-white rounded-lg shadow-lg p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-2xl font-bold text-gray-900">Your Profile</h2>
+      <div class="flex space-x-4">
+        <button (click)="updateTraits()" class="flex items-center text-indigo-600 hover:text-indigo-700">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Update Traits
+        </button>
+        <button (click)="updateAttitudes()" class="flex items-center text-indigo-600 hover:text-indigo-700">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Update Attitudes
+        </button>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+        <div class="space-y-4">
+          <div>
+            <p class="text-sm text-gray-600">Name</p>
+            <p class="text-gray-900">{{ userContext?.name || 'Not set' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Email</p>
+            <p class="text-gray-900">{{ userContext?.email || 'Not set' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Professional Title</p>
+            <p class="text-gray-900">{{ userContext?.professionalTitle || 'Not set' }}</p>
+          </div>
+          <div>
+            <p class="text-sm text-gray-600">Location</p>
+            <p class="text-gray-900">{{ userContext?.location || 'Not set' }}</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Traits Assessment</h3>
+        <div class="space-y-4">
+          <div *ngIf="hasTraits">
+            <p class="text-sm text-gray-600">Last Updated</p>
+            <p class="text-gray-900">{{ traitsLastUpdated | date:'mediumDate' }}</p>
+          </div>
+          <div *ngIf="!hasTraits">
+            <p class="text-gray-600">No traits assessment completed yet</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Attitudes Assessment</h3>
+        <div class="space-y-4">
+          <div *ngIf="hasAttitudes">
+            <p class="text-sm text-gray-600">Last Updated</p>
+            <p class="text-gray-900">{{ attitudesLastUpdated | date:'mediumDate' }}</p>
+          </div>
+          <div *ngIf="!hasAttitudes">
+            <p class="text-gray-600">No attitudes assessment completed yet</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
+import { RouterModule, Router } from '@angular/router';
 import { GameService } from '../../services/game.service';
 import { ResultsAnalysisService, FinalResults } from '../../services/results-analysis.service';
 import { UserService } from '../../services/user.service';
 import { LoadingService } from '../../services/loading.service';
-import { collection, query, where, getDocs } from '@angular/fire/firestore';
+import { collection, query, where, getDocs, Timestamp } from '@angular/fire/firestore';
 import { Firestore } from '@angular/fire/firestore';
+import { UserContext } from '../../models/user.model';
 
 interface SkillLevel {
   name: string;
@@ -62,16 +63,96 @@ export class DashboardComponent implements OnInit {
     recommendations: []
   };
 
+  userContext: UserContext | null = null;
+  hasTraits: boolean = false;
+  traitsLastUpdated: Date | null = null;
+  hasAttitudes: boolean = false;
+  attitudesLastUpdated: Date | null = null;
+
   constructor(
     private gameService: GameService,
     private resultsAnalysisService: ResultsAnalysisService,
     private userService: UserService,
     private loadingService: LoadingService,
-    private firestore: Firestore
+    private firestore: Firestore,
+    private router: Router
   ) { }
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
+    await this.loadUserProfile();
     this.loadDashboardData();
+  }
+
+  private async loadUserProfile(): Promise<void> {
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) return;
+
+    try {
+      // Load user context
+      const user = await this.userService.getUser(userId);
+      if (user) {
+        this.userContext = {
+          name: user.name,
+          email: user.email,
+          professionalTitle: user.professionalTitle,
+          location: user.location
+        };
+      }
+
+      // Load traits data
+      const traits = await this.userService.getUserTraits(userId);
+      this.hasTraits = !!traits;
+      if (traits) {
+        // Get the last updated timestamp from Firestore
+        const traitsRef = collection(this.firestore, 'users');
+        const traitsQuery = query(traitsRef, where('id', '==', userId));
+        const traitsSnapshot = await getDocs(traitsQuery);
+
+        if (!traitsSnapshot.empty) {
+          const userDoc = traitsSnapshot.docs[0];
+          const traitsData = userDoc.data();
+          if (traitsData['traits']?.['updatedAt']) {
+            this.traitsLastUpdated = (traitsData['traits']['updatedAt'] as Timestamp).toDate();
+          } else {
+            this.traitsLastUpdated = new Date();
+          }
+        }
+      }
+
+      // Load attitudes data
+      const attitudes = await this.userService.getUserAttitudes(userId);
+      this.hasAttitudes = !!attitudes;
+      if (attitudes) {
+        // Get the last updated timestamp from Firestore
+        const attitudesRef = collection(this.firestore, 'users');
+        const attitudesQuery = query(attitudesRef, where('id', '==', userId));
+        const attitudesSnapshot = await getDocs(attitudesQuery);
+
+        if (!attitudesSnapshot.empty) {
+          const userDoc = attitudesSnapshot.docs[0];
+          const attitudesData = userDoc.data();
+          if (attitudesData['attitudes']?.['updatedAt']) {
+            this.attitudesLastUpdated = (attitudesData['attitudes']['updatedAt'] as Timestamp).toDate();
+          } else {
+            this.attitudesLastUpdated = new Date();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  }
+
+  updateContext(): void {
+    this.router.navigate(['/context']);
+  }
+
+  updateTraits(): void {
+    this.router.navigate(['/traits']);
+  }
+
+  updateAttitudes(): void {
+    this.router.navigate(['/attitudes']);
   }
 
   private async loadDashboardData(): Promise<void> {
