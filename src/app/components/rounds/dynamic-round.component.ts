@@ -206,9 +206,20 @@ export class DynamicRoundComponent implements OnInit {
 
       // Don't navigate immediately - let the user see the evaluation first
       // The user will click the continue button to move to the next round
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting response:', error);
-      this.error = 'Failed to submit response. Please try again.';
+      // Provide more specific error messages based on the error type
+      if (error.message.includes('No valid response from evaluation service')) {
+        this.error = 'The evaluation service is currently unavailable. Please try again later.';
+      } else if (error.message.includes('Failed to parse JSON response')) {
+        this.error = 'There was an error processing your response. Please try again.';
+      } else if (error.message.includes('Invalid evaluation response structure')) {
+        this.error = 'The evaluation response was invalid. Please try again.';
+      } else if (error.message.includes('timeout')) {
+        this.error = 'The evaluation took too long. Please try again.';
+      } else {
+        this.error = 'An unexpected error occurred. Please try again.';
+      }
     } finally {
       this.isSubmitting = false;
       this.showAiThinking = false;

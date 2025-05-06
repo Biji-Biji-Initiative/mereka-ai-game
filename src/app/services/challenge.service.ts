@@ -96,26 +96,8 @@ export class ChallengeService extends BaseService {
       return evaluation;
     } catch (error) {
       console.error('Error evaluating response:', error);
-      // Return a default evaluation in case of error
-      return {
-        metrics: {
-          creativity: Math.random() * 100,
-          practicality: Math.random() * 100,
-          depth: Math.random() * 100,
-          humanEdge: Math.random() * 100,
-          overall: Math.random() * 100
-        },
-        feedback: ['An error occurred during evaluation.'],
-        strengths: ['Response submitted successfully.'],
-        improvements: ['Try again with a more detailed response.'],
-        comparison: {
-          userScore: Math.random() * 100,
-          rivalScore: Math.random() * 100,
-          advantage: 'tie',
-          advantageReason: 'Evaluation could not be completed.'
-        },
-        badges: ['Participant']
-      };
+      // Throw the error to be handled by the UI
+      throw error;
     }
   }
 

@@ -26,6 +26,19 @@
       </div>
     </div>
 
+    <!-- Error Message -->
+    <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative mb-4"
+      role="alert">
+      <strong class="font-bold">Error!</strong>
+      <span class="block sm:inline">{{ error }}</span>
+      <button (click)="error = null" class="absolute top-0 bottom-0 right-0 px-4 py-3">
+        <span class="sr-only">Dismiss</span>
+        <svg class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+
     <!-- Question -->
     <div *ngIf="showQuestion" class="bg-white rounded-lg shadow-md p-6">
       <h2 class="text-xl font-semibold mb-4">Your Challenge</h2>
