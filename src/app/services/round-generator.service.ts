@@ -305,7 +305,9 @@ export class RoundGeneratorService {
           const answers = value.map((v: any) => v.answer).join(', ');
           prompt += `- Trait Scores: ${answers}\n`;
         } else if (trait === 'questions' && Array.isArray(value)) {
-          const questions = value.map((q: any) => q.text).join('\n  ');
+          const questions = value.map((q: any) =>
+            q.subtitle ? `${q.title}: ${q.subtitle}` : q.title
+          ).join('\n  ');
           prompt += `- Trait Questions:\n  ${questions}\n`;
         }
       }
@@ -319,7 +321,9 @@ export class RoundGeneratorService {
           const answers = value.map((v: any) => v.answer).join(', ');
           prompt += `- Attitude Scores: ${answers}\n`;
         } else if (attitude === 'questions' && Array.isArray(value)) {
-          const questions = value.map((q: any) => q.text).join('\n  ');
+          const questions = value.map((q: any) =>
+            q.subtitle ? `${q.title}: ${q.subtitle}` : q.title
+          ).join('\n  ');
           prompt += `- Attitude Questions:\n  ${questions}\n`;
         }
       }

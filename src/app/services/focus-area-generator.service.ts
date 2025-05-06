@@ -175,7 +175,7 @@ export class FocusAreaGeneratorService {
       }
       if (user.traits.questions && Array.isArray(user.traits.questions)) {
         const questions = user.traits.questions.map((q: any) =>
-          q.about ? `${q.title}: ${q.about.description}` : q.title
+          q.subtitle ? `${q.title}: ${q.subtitle}` : q.title
         ).join('\n  ');
         prompt += `- Trait Questions:\n  ${questions}\n`;
       }
@@ -190,7 +190,7 @@ export class FocusAreaGeneratorService {
       }
       if (user.attitudes.questions && Array.isArray(user.attitudes.questions)) {
         const questions = user.attitudes.questions.map((q: any) =>
-          q.about ? `${q.title}: ${q.about.description}` : q.title
+          q.subtitle ? `${q.title}: ${q.subtitle}` : q.title
         ).join('\n  ');
         prompt += `- Attitude Questions:\n  ${questions}\n`;
       }
