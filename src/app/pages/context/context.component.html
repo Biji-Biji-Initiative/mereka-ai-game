@@ -20,15 +20,21 @@
                     This information helps us personalize your human edge profile
                 </p>
 
-                <form (ngSubmit)="onSubmit()" class="space-y-6">
+                <form [formGroup]="contextForm" (ngSubmit)="onSubmit()" class="space-y-6">
                     <!-- Name -->
                     <div>
                         <label for="name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Name
                         </label>
-                        <input type="text" id="name" name="name" [(ngModel)]="userContext.name"
+                        <input type="text" id="name" formControlName="name"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                            placeholder="Your name" required>
+                            placeholder="Your name">
+                        <div *ngIf="formControls['name'].touched && formControls['name'].invalid"
+                            class="mt-1 text-sm text-red-600">
+                            <span *ngIf="formControls['name'].errors?.['required']">Name is required</span>
+                            <span *ngIf="formControls['name'].errors?.['minlength']">Name must be at least 2
+                                characters</span>
+                        </div>
                     </div>
 
                     <!-- Email -->
@@ -36,9 +42,15 @@
                         <label for="email" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Email
                         </label>
-                        <input type="email" id="email" name="email" [(ngModel)]="userContext.email"
+                        <input type="email" id="email" formControlName="email"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                            placeholder="your.email@example.com" required>
+                            placeholder="your.email@example.com">
+                        <div *ngIf="formControls['email'].touched && formControls['email'].invalid"
+                            class="mt-1 text-sm text-red-600">
+                            <span *ngIf="formControls['email'].errors?.['required']">Email is required</span>
+                            <span *ngIf="formControls['email'].errors?.['email']">Please enter a valid email
+                                address</span>
+                        </div>
                     </div>
 
                     <!-- Professional Title -->
@@ -47,10 +59,16 @@
                             class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Professional Title
                         </label>
-                        <input type="text" id="professionalTitle" name="professionalTitle"
-                            [(ngModel)]="userContext.professionalTitle"
+                        <input type="text" id="professionalTitle" formControlName="professionalTitle"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                            placeholder="e.g. Software Engineer, Designer, Manager" required>
+                            placeholder="e.g. Software Engineer, Designer, Manager">
+                        <div *ngIf="formControls['professionalTitle'].touched && formControls['professionalTitle'].invalid"
+                            class="mt-1 text-sm text-red-600">
+                            <span *ngIf="formControls['professionalTitle'].errors?.['required']">Professional title is
+                                required</span>
+                            <span *ngIf="formControls['professionalTitle'].errors?.['minlength']">Title must be at least
+                                2 characters</span>
+                        </div>
                     </div>
 
                     <!-- Location -->
@@ -58,16 +76,22 @@
                         <label for="location" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                             Location
                         </label>
-                        <input type="text" id="location" name="location" [(ngModel)]="userContext.location"
+                        <input type="text" id="location" formControlName="location"
                             class="mt-1 block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                            placeholder="City, Country" required>
+                            placeholder="City, Country">
+                        <div *ngIf="formControls['location'].touched && formControls['location'].invalid"
+                            class="mt-1 text-sm text-red-600">
+                            <span *ngIf="formControls['location'].errors?.['required']">Location is required</span>
+                            <span *ngIf="formControls['location'].errors?.['minlength']">Location must be at least 2
+                                characters</span>
+                        </div>
                     </div>
 
                     <!-- Submit Button -->
                     <div>
-                        <button type="submit"
-                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors">
-                            Continue
+                        <button type="submit" [disabled]="contextForm.invalid || isSubmitting"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            {{ isSubmitting ? 'Submitting...' : 'Continue' }}
                         </button>
                     </div>
                 </form>

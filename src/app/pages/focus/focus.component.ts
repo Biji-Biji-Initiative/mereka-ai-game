@@ -6,6 +6,7 @@ import { ChallengeService } from '../../services/challenge.service';
 import { LoadingService } from '../../services/loading.service';
 import { RoundGeneratorService } from '../../services/round-generator.service';
 import { FocusAreaGeneratorService } from '../../services/focus-area-generator.service';
+import { UserService } from '../../services/user.service';
 
 @Component({
   selector: 'app-focus',
@@ -26,10 +27,32 @@ export class FocusComponent implements OnInit {
     private challengeService: ChallengeService,
     private loadingService: LoadingService,
     private roundGeneratorService: RoundGeneratorService,
-    private focusAreaGeneratorService: FocusAreaGeneratorService
+    private focusAreaGeneratorService: FocusAreaGeneratorService,
+    private userService: UserService
   ) { }
 
-  ngOnInit(): void {
+  async ngOnInit() {
+    // Check if user exists and has completed context, traits, and attitudes
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) {
+      this.router.navigate(['/context']);
+      return;
+    }
+
+    // Check if user has completed traits
+    const traits = await this.userService.getUserTraits(userId);
+    if (!traits) {
+      this.router.navigate(['/traits']);
+      return;
+    }
+
+    // Check if user has completed attitudes
+    const attitudes = await this.userService.getUserAttitudes(userId);
+    if (!attitudes) {
+      this.router.navigate(['/attitudes']);
+      return;
+    }
+
     this.generateFocusAreas();
   }
 
