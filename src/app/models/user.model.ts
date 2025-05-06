@@ -3,9 +3,26 @@ export interface TraitAnswer {
   answer: number;
 }
 
+export interface TraitQuestion {
+  id: number;
+  title: string;
+  subtitle: string;
+  type: 'rating' | 'text' | 'multiple-choice';
+  options?: {
+    min: number;
+    max: number;
+    minLabel: string;
+    maxLabel: string;
+  };
+  about?: {
+    title: string;
+    description: string;
+  };
+}
+
 export interface TraitsData {
   answers: TraitAnswer[];
-  questions: any[];
+  questions: TraitQuestion[];
 }
 
 export interface AttitudeAnswer {
@@ -13,9 +30,26 @@ export interface AttitudeAnswer {
   answer: number;
 }
 
+export interface AttitudeQuestion {
+  id: number;
+  title: string;
+  subtitle: string;
+  type: 'rating' | 'text' | 'multiple-choice';
+  options?: {
+    min: number;
+    max: number;
+    minLabel: string;
+    maxLabel: string;
+  };
+  about?: {
+    title: string;
+    description: string;
+  };
+}
+
 export interface AttitudesData {
   answers: AttitudeAnswer[];
-  questions: any[];
+  questions: AttitudeQuestion[];
 }
 
 export interface UserContext {

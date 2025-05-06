@@ -2,10 +2,31 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { UserService } from './user.service';
 import { environment } from '../../environments/environment';
-import { CloudFunctionPayload, exampleCloudFunctionPayload } from '../models/cloud-function-payload.model';
-import { RoundResponse } from '../models/cloud-function-response.model';
+import { Observable, throwError } from 'rxjs';
+import { catchError, timeout } from 'rxjs/operators';
+import { Firestore, collection, query, where, getDocs, orderBy, limit } from '@angular/fire/firestore';
+import { RoundData, Challenge } from '../models/challenge.model';
+import { CloudFunctionPayload, RoundGenerationOptionsPayload } from '../models/cloud-function-payload.model';
+import { User, TraitQuestion, AttitudeQuestion } from '../models/user.model';
 
-// Cloud Function response interface
+export interface GeneratedChallenge {
+  id: string;
+  question: string;
+  type: string;
+  points: number;
+}
+
+export interface GeneratedRound {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  context: string;
+  difficulty: number;
+  challenges: GeneratedChallenge[];
+  estimatedTime: number;
+}
+
 interface CloudFunctionResponse {
   success: boolean;
   data: {
@@ -28,255 +49,362 @@ interface CloudFunctionResponse {
       prompt_tokens: number;
       completion_tokens: number;
       total_tokens: number;
-      prompt_tokens_details: {
-        cached_tokens: number;
-        audio_tokens: number;
-      };
-      completion_tokens_details: {
-        reasoning_tokens: number;
-        audio_tokens: number;
-        accepted_prediction_tokens: number;
-        rejected_prediction_tokens: number;
-      };
     };
-    service_tier: string;
-    system_fingerprint: string;
   };
-}
-
-// Round generation options interface
-interface RoundGenerationOptions {
-  // Round types
-  roundTypes: string[];
-
-  // Difficulty levels
-  difficultyLevels: string[];
-
-  // Context categories
-  contextCategories: string[];
-
-  // Focus areas
-  focusAreas: string[];
-
-  // Challenge formats
-  challengeFormats: string[];
-
-  // Answer types
-  answerTypes: string[];
-}
-
-export interface RoundGenerationRequest {
-  userId: string;
-  focusType: string;
-  context?: string;
-  previousRounds?: {
-    question: string;
-    answer: string;
-    evaluation: any;
-  }[];
-}
-
-export interface GeneratedRound {
-  id: string;
-  title: string;
-  description: string;
-  type: string;
-  context: string;
-  difficulty: number;
-  challenges: GeneratedChallenge[];
-  estimatedTime: number; // in minutes
-}
-
-export interface GeneratedChallenge {
-  id: string;
-  question: string;
-  type: string;
-  options?: string[];
-  correctAnswer?: string;
-  points: number;
 }
 
 @Injectable({
   providedIn: 'root'
 })
 export class RoundGeneratorService {
-  // Cloud Function URL
-  private readonly CLOUD_FUNCTION_URL = `${environment.apiUrl}/processRequest`;
+  private readonly API_URL = `${environment.apiUrl}/processRequest`;
+  private readonly TIMEOUT_MS = 300000; // 30 seconds timeout
 
   constructor(
     private http: HttpClient,
-    private userService: UserService
+    private userService: UserService,
+    private firestore: Firestore
   ) { }
 
-  async generateRound(userId: string, focusType: string, context?: string, previousRounds?: any[]): Promise<RoundResponse> {
+  async generateRound(focusArea: string, roundNumber: string, context?: string, previousRounds?: any[]): Promise<GeneratedRound> {
     try {
+      // Get current user ID
+      const userId = this.userService.getCurrentUserId();
+      if (!userId) throw new Error('No user ID found');
+
       // Fetch user data from the database
       const userProfile = await this.userService.getUser(userId);
+      if (!userProfile) throw new Error('User not found');
 
-      // Prepare the request payload
-      const payload: CloudFunctionPayload = {
-        userId,
-        focusType,
-        context: context || `Generate a challenge focused on ${focusType}`,
-        traits: exampleCloudFunctionPayload.traits,
-        attitudes: exampleCloudFunctionPayload.attitudes,
-        userProfile: userProfile || exampleCloudFunctionPayload.userProfile,
-        options: exampleCloudFunctionPayload.options,
-        previousRounds: previousRounds || []
+      // Validate focus area
+      if (!focusArea) {
+        throw new Error('Focus area is required');
+      }
+
+      // Format traits and attitudes according to payload model
+      const formattedTraits = {
+        answers: userProfile.traits?.answers?.map(answer => ({
+          questionId: answer.questionId,
+          answer: answer.answer
+        })) || [],
+        questions: userProfile.traits?.questions?.map(question => ({
+          id: question.id,
+          text: question.title,
+          options: question.options?.minLabel && question.options?.maxLabel
+            ? [question.options.minLabel, question.options.maxLabel]
+            : []
+        })) || []
       };
 
-      // Create the simple request for array of strings
-      const simpleRequest = this.createSimpleRequest(payload);
+      const formattedAttitudes = {
+        answers: userProfile.attitudes?.answers?.map(answer => ({
+          questionId: answer.questionId,
+          answer: answer.answer
+        })) || [],
+        questions: userProfile.attitudes?.questions?.map(question => ({
+          id: question.id,
+          text: question.title,
+          options: question.options?.minLabel && question.options?.maxLabel
+            ? [question.options.minLabel, question.options.maxLabel]
+            : []
+        })) || []
+      };
 
-      // Call the Cloud Function with the simple request
-      const response = await this.http.post<CloudFunctionResponse>(this.CLOUD_FUNCTION_URL, simpleRequest).toPromise();
+      // Create a structured request for the cloud function
+      const request = this.createStructuredRequest({
+        userId,
+        focusType: focusArea,
+        context: context || `Generate a challenge focused on ${focusArea} for round ${roundNumber}`,
+        userProfile: {
+          name: userProfile.name,
+          email: userProfile.email,
+          professionalTitle: userProfile.professionalTitle,
+          location: userProfile.location,
+          currentRoute: '/rounds',
+          isAnonymous: false
+        },
+        traits: formattedTraits,
+        attitudes: formattedAttitudes,
+        options: this.getRoundGenerationOptions(roundNumber, previousRounds),
+        previousRounds: previousRounds || []
+      });
 
-      if (!response || !response.success) {
-        throw new Error('No valid response from Cloud Function');
+      // Call the cloud function with timeout
+      const response = await this.http.post<CloudFunctionResponse>(
+        this.API_URL,
+        request
+      )
+        .pipe(
+          timeout(this.TIMEOUT_MS),
+          catchError(error => {
+            console.error('Error generating round:', error);
+            return throwError(error);
+          })
+        )
+        .toPromise();
+
+      if (!response?.success) {
+        throw new Error('Failed to generate round');
       }
 
-      // Extract the array of strings from the content field
+      // Parse the response content
       const content = response.data.choices[0].message.content;
-      let questions: string[] = [];
 
+      // Clean the content to ensure it's valid JSON
+      const cleanedContent = content
+        .replace(/```json/g, '')
+        .replace(/```/g, '')
+        .trim();
+
+      let question: string;
       try {
-        // Parse the content as JSON
-        questions = JSON.parse(content);
-      } catch (error) {
-        console.error('Error parsing content as JSON:', error);
-        // Fallback: try to extract strings from the content
-        const matches = content.match(/"([^"]+)"/g);
-        if (matches) {
-          questions = matches.map(match => match.replace(/"/g, ''));
-        } else {
-          throw new Error('Could not extract questions from response');
-        }
+        const questions = JSON.parse(cleanedContent);
+        question = questions[0]; // Get the first question
+      } catch (parseError) {
+        console.error('Error parsing question:', parseError);
+        throw new Error('Invalid question response format');
       }
 
-      // Convert the array of strings to a RoundResponse
-      return this.convertToRoundResponse(questions, focusType);
+      // Create the generated round with a challenge
+      const roundId = 'round-' + Date.now();
+      const challenge: GeneratedChallenge = {
+        id: `challenge-1`,
+        question: question,
+        type: 'open-ended',
+        points: this.calculatePoints(roundNumber)
+      };
+
+      // Return the generated round
+      return {
+        id: roundId,
+        title: `${focusArea.charAt(0).toUpperCase() + focusArea.slice(1)} Challenge`,
+        description: `A challenge focused on ${focusArea}`,
+        type: 'scenario',
+        context: context || 'general',
+        difficulty: parseInt(roundNumber),
+        challenges: [challenge],
+        estimatedTime: 20
+      };
     } catch (error) {
       console.error('Error generating round:', error);
       throw error;
     }
   }
 
-  private createSimpleRequest(payload: CloudFunctionPayload): any {
-    // Extract focus areas and context categories for the prompt
-    const focusAreas = payload.options.focusAreas.join(', ');
-    const contextCategories = payload.options.contextCategories.join(', ');
-    const roundTypes = payload.options.roundTypes.join(', ');
-    const challengeFormats = payload.options.challengeFormats.join(', ');
+  private async getUserChallengeHistory(userId: string): Promise<any[]> {
+    try {
+      const challengesRef = collection(this.firestore, 'challenges');
+      const q = query(
+        challengesRef,
+        where('userId', '==', userId),
+        orderBy('createdAt', 'desc'),
+        limit(10)
+      );
 
-    // Create a summary of the user's traits and attitudes
-    const traitsSummary = this.summarizeTraitsAndAttitudes(payload.traits, payload.attitudes);
+      const querySnapshot = await getDocs(q);
+      return querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          question: data['question'],
+          answer: data['answer'],
+          evaluation: data['evaluation']
+        };
+      });
+    } catch (error) {
+      console.error('Error fetching challenge history:', error);
+      return [];
+    }
+  }
 
-    // Create a summary of previous rounds if they exist
-    let previousRoundsSummary = '';
+  private getRoundGenerationOptions(roundNumber: string, previousRounds?: any[]): RoundGenerationOptionsPayload {
+    const difficulty = this.calculateDifficulty(roundNumber, previousRounds);
+    const creativeVariation = this.calculateCreativeVariation(roundNumber, previousRounds);
+
+    return {
+      roundTypes: [
+        "scenario", "reflection", "problem-solving", "decision-making",
+        "self-assessment", "hypothetical", "analytical", "creative"
+      ],
+      difficultyLevels: [difficulty],
+      contextCategories: [
+        "personal", "professional", "educational", "social",
+        "emotional", "ethical", "cultural", "environmental"
+      ],
+      focusAreas: [
+        "leadership", "communication", "teamwork", "problem-solving",
+        "adaptability", "creativity", "emotional intelligence", "critical thinking"
+      ],
+      challengeFormats: [
+        "open-ended", "scenario-based", "reflection",
+        "self-assessment", "hypothetical", "analytical", "creative"
+      ],
+      answerTypes: [
+        "text", "rating", "ranking"
+      ]
+    };
+  }
+
+  private calculateDifficulty(roundNumber: string, previousRounds?: any[]): string {
+    const roundNum = parseInt(roundNumber);
+    if (roundNum === 1) return 'beginner';
+    if (roundNum === 2) return 'intermediate';
+    if (roundNum === 3) return 'advanced';
+
+    // If we have previous rounds, use their performance to adjust difficulty
+    if (previousRounds && previousRounds.length > 0) {
+      const lastRound = previousRounds[previousRounds.length - 1];
+      if (lastRound.evaluation?.metrics?.overall >= 80) return 'advanced';
+      if (lastRound.evaluation?.metrics?.overall >= 60) return 'intermediate';
+    }
+
+    return 'intermediate';
+  }
+
+  private calculateCreativeVariation(roundNumber: string, previousRounds?: any[]): number {
+    const roundNum = parseInt(roundNumber);
+    if (roundNum === 1) return 0.6;
+    if (roundNum === 2) return 0.7;
+    if (roundNum === 3) return 0.8;
+
+    // If we have previous rounds, use their performance to adjust creativity
+    if (previousRounds && previousRounds.length > 0) {
+      const lastRound = previousRounds[previousRounds.length - 1];
+      if (lastRound.evaluation?.metrics?.overall >= 80) return 0.9;
+      if (lastRound.evaluation?.metrics?.overall >= 60) return 0.8;
+    }
+
+    return 0.7;
+  }
+
+  private calculatePoints(roundNumber: string): number {
+    const roundNum = parseInt(roundNumber);
+    return 10 + (roundNum * 5); // Base 10 points + 5 points per round
+  }
+
+  private createStructuredRequest(payload: CloudFunctionPayload): any {
+    // Build the challenge prompt
+    let prompt = `### CHALLENGE GENERATION TASK\n\n`;
+    prompt += `Generate a challenge for effective AI communication based on the user's profile and history. The challenge should be appropriate for the specified difficulty level and focus area.\n\n`;
+
+    // Add user profile section
+    prompt += `### USER PROFILE\n`;
+    if (payload.userProfile?.professionalTitle) {
+      prompt += `Professional Title: ${payload.userProfile.professionalTitle}\n`;
+    }
+    if (payload.userProfile?.location) {
+      prompt += `Location: ${payload.userProfile.location}\n`;
+    }
+
+    // Add personality traits if available
+    if (payload.traits && Object.keys(payload.traits).length > 0) {
+      prompt += `\nPersonality Traits (scale 1-10):\n`;
+      for (const [trait, value] of Object.entries(payload.traits)) {
+        if (trait === 'answers' && Array.isArray(value)) {
+          const answers = value.map((v: any) => v.answer).join(', ');
+          prompt += `- Trait Scores: ${answers}\n`;
+        } else if (trait === 'questions' && Array.isArray(value)) {
+          const questions = value.map((q: any) => q.text).join('\n  ');
+          prompt += `- Trait Questions:\n  ${questions}\n`;
+        }
+      }
+    }
+
+    // Add attitudes toward AI if available
+    if (payload.attitudes && Object.keys(payload.attitudes).length > 0) {
+      prompt += `\nAttitudes Toward AI (scale 1-10):\n`;
+      for (const [attitude, value] of Object.entries(payload.attitudes)) {
+        if (attitude === 'answers' && Array.isArray(value)) {
+          const answers = value.map((v: any) => v.answer).join(', ');
+          prompt += `- Attitude Scores: ${answers}\n`;
+        } else if (attitude === 'questions' && Array.isArray(value)) {
+          const questions = value.map((q: any) => q.text).join('\n  ');
+          prompt += `- Attitude Questions:\n  ${questions}\n`;
+        }
+      }
+    }
+    prompt += `\n`;
+
+    // Add challenge parameters
+    prompt += `### CHALLENGE PARAMETERS\n`;
+    prompt += `Focus Area: ${payload.focusType}\n`;
+    prompt += `Difficulty: ${payload.options.difficultyLevels[0]}\n`;
+    if (payload.context) {
+      prompt += `Context: ${payload.context}\n`;
+    }
+    prompt += `\n`;
+
+    // Add previous rounds if available
     if (payload.previousRounds && payload.previousRounds.length > 0) {
-      previousRoundsSummary = '\n\nPrevious Rounds Summary:';
+      prompt += `### PREVIOUS ROUNDS\n`;
       payload.previousRounds.forEach((round, index) => {
-        previousRoundsSummary += `\nRound ${index + 1}:
-          - Question: ${round.question}
-          - User's Answer: ${round.answer}
-          - Evaluation: ${JSON.stringify(round.evaluation)}`;
+        prompt += `Round ${index + 1}:\n`;
+        if (round.question) {
+          prompt += `- Question: ${round.question}\n`;
+        }
+        if (round.answer) {
+          prompt += `- User's Answer: ${round.answer}\n`;
+        }
+        if (round.evaluation) {
+          prompt += `- Evaluation: ${JSON.stringify(round.evaluation)}\n`;
+        }
+        prompt += `\n`;
       });
     }
+
+    // Add creativity guidance
+    prompt += `### CREATIVITY GUIDANCE\n`;
+    const creativeVariation = this.calculateCreativeVariation('1', payload.previousRounds);
+    prompt += `- Variation level: ${Math.floor(creativeVariation * 100)}%\n`;
+    if (creativeVariation > 0.8) {
+      prompt += `- Generate highly creative and unique challenges.\n`;
+    } else if (creativeVariation > 0.6) {
+      prompt += `- Balance creativity with structured learning.\n`;
+    } else {
+      prompt += `- Focus on foundational concepts with moderate creativity.\n`;
+    }
+    prompt += `\n`;
+
+    // Add adaptation guidance
+    prompt += `### ADAPTATION GUIDANCE\n`;
+    prompt += `- Create a challenge that builds on the user's previous performance.\n`;
+    prompt += `- Consider the patterns in previous rounds when generating the challenge.\n`;
+    prompt += `- Ensure appropriate difficulty for the current round.\n`;
+    if (payload.previousRounds && payload.previousRounds.length > 0) {
+      prompt += `- Reference patterns from the user's previous rounds when relevant.\n`;
+    }
+    prompt += `\n`;
+
+    // Add response format instructions
+    prompt += `### RESPONSE FORMAT\n`;
+    prompt += `Return a single challenge question as a JSON array with one string element. The question should:\n`;
+    prompt += `1. Be clear and concise\n`;
+    prompt += `2. Be open-ended\n`;
+    prompt += `3. Be appropriate for the specified difficulty level\n`;
+    prompt += `4. Focus on the specified focus area\n`;
+    prompt += `5. Encourage thoughtful responses\n\n`;
+    prompt += `Example format:\n`;
+    prompt += `["Your challenge question here"]\n\n`;
 
     // Create the system message
     const systemMessage = {
       role: 'system',
-      content: `You are an AI game assistant that generates personalized challenges and questions for users.
-
-      IMPORTANT INSTRUCTIONS:
-      1. Generate a round of challenges based on the user's profile, traits, and attitudes.
-      2. The round should focus on the specified focus type: ${payload.focusType}.
-      3. The context for the challenges should be: ${payload.context}.
-      4. Use the following information about the user to personalize the challenges:
-         - User Profile: ${JSON.stringify(payload.userProfile)}
-         - Traits Summary: ${traitsSummary}
-      5. The challenges should be appropriate for the user's level based on their traits and attitudes.
-      6. Your response MUST be an array of strings, where each string is a question for a challenge.
-      7. Generate 2 questions that progressively increase in difficulty.
-      8. Each question should be clear, concise, and focused on the specified focus type.
-      9. The questions should be open-ended and encourage thoughtful responses.
-      10. Consider the user's previous performance and responses to create more challenging and relevant questions.
-      ${previousRoundsSummary}
-
-      Available focus areas: ${focusAreas}
-      Available context categories: ${contextCategories}
-      Available round types: ${roundTypes}
-      Available challenge formats: ${challengeFormats}`
+      content: `You are an AI challenge creator specializing in ${payload.focusType} challenges. Your task is to generate an engaging and appropriately challenging question that helps users improve their interaction with AI systems.`
     };
 
     // Create the user message
     const userMessage = {
       role: 'user',
-      content: `Generate a round of challenges for a user with the following focus type: ${payload.focusType}.`
+      content: prompt
     };
 
-    // Return the complete OpenAI API request
+    // Return the complete request
     return {
+      type: 'generateChallenge',
       model: "gpt-4o",
       messages: [systemMessage, userMessage],
-      temperature: 0.4
-    };
-  }
-
-  private summarizeTraitsAndAttitudes(traits: any, attitudes: any): string {
-    if (!traits || !attitudes) {
-      return "No traits or attitudes data available.";
-    }
-
-    // Summarize traits
-    let traitsSummary = "Traits: ";
-    if (traits.answers && traits.answers.length > 0) {
-      const traitScores = traits.answers.map((answer: any) => {
-        const question = traits.questions.find((q: any) => q.id === answer.questionId);
-        return `${question ? question.text : 'Unknown trait'}: ${answer.answer}/5`;
-      });
-      traitsSummary += traitScores.join(', ');
-    } else {
-      traitsSummary += "No trait answers available.";
-    }
-
-    // Summarize attitudes
-    let attitudesSummary = "Attitudes: ";
-    if (attitudes.answers && attitudes.answers.length > 0) {
-      const attitudeScores = attitudes.answers.map((answer: any) => {
-        const question = attitudes.questions.find((q: any) => q.id === answer.questionId);
-        return `${question ? question.text : 'Unknown attitude'}: ${answer.answer}/5`;
-      });
-      attitudesSummary += attitudeScores.join(', ');
-    } else {
-      attitudesSummary += "No attitude answers available.";
-    }
-
-    return `${traitsSummary}. ${attitudesSummary}`;
-  }
-
-  private convertToRoundResponse(questions: string[], focusType: string): RoundResponse {
-    // Generate a unique ID for the round
-    const roundId = 'round-' + Date.now();
-
-    // Create challenges from the questions
-    const challenges = questions.map((question, index) => ({
-      id: `challenge-${index + 1}`,
-      question: question,
-      type: 'open-ended',
-      points: 10 + (index * 5) // Increasing points for each challenge
-    }));
-
-    // Create the round response
-    return {
-      id: roundId,
-      title: `${focusType.charAt(0).toUpperCase() + focusType.slice(1)} Challenge`,
-      description: `A series of challenges focused on ${focusType}`,
-      type: 'scenario',
-      context: 'general',
-      difficulty: 3,
-      challenges: challenges,
-      estimatedTime: 20
+      temperature: 0.5
     };
   }
 }

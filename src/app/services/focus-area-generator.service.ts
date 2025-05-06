@@ -169,28 +169,30 @@ export class FocusAreaGeneratorService {
     // Add personality traits if available
     if (user.traits && Object.keys(user.traits).length > 0) {
       prompt += `\nPersonality Traits (scale 1-10):\n`;
-      for (const [trait, value] of Object.entries(user.traits)) {
-        if (trait === 'answers' && Array.isArray(value)) {
-          const answers = value.map((v: any) => v.answer).join(', ');
-          prompt += `- Trait Scores: ${answers}\n`;
-        } else if (trait === 'questions' && Array.isArray(value)) {
-          const questions = value.map((q: any) => `${q.title}: ${q.about.description}`).join('\n  ');
-          prompt += `- Trait Questions:\n  ${questions}\n`;
-        }
+      if (user.traits.answers && Array.isArray(user.traits.answers)) {
+        const answers = user.traits.answers.map((v: any) => v.answer).join(', ');
+        prompt += `- Trait Scores: ${answers}\n`;
+      }
+      if (user.traits.questions && Array.isArray(user.traits.questions)) {
+        const questions = user.traits.questions.map((q: any) =>
+          q.about ? `${q.title}: ${q.about.description}` : q.title
+        ).join('\n  ');
+        prompt += `- Trait Questions:\n  ${questions}\n`;
       }
     }
 
     // Add attitudes toward AI if available
     if (user.attitudes && Object.keys(user.attitudes).length > 0) {
       prompt += `\nAttitudes Toward AI (scale 1-10):\n`;
-      for (const [attitude, value] of Object.entries(user.attitudes)) {
-        if (attitude === 'answers' && Array.isArray(value)) {
-          const answers = value.map((v: any) => v.answer).join(', ');
-          prompt += `- Attitude Scores: ${answers}\n`;
-        } else if (attitude === 'questions' && Array.isArray(value)) {
-          const questions = value.map((q: any) => `${q.title}: ${q.about.description}`).join('\n  ');
-          prompt += `- Attitude Questions:\n  ${questions}\n`;
-        }
+      if (user.attitudes.answers && Array.isArray(user.attitudes.answers)) {
+        const answers = user.attitudes.answers.map((v: any) => v.answer).join(', ');
+        prompt += `- Attitude Scores: ${answers}\n`;
+      }
+      if (user.attitudes.questions && Array.isArray(user.attitudes.questions)) {
+        const questions = user.attitudes.questions.map((q: any) =>
+          q.about ? `${q.title}: ${q.about.description}` : q.title
+        ).join('\n  ');
+        prompt += `- Attitude Questions:\n  ${questions}\n`;
       }
     }
     prompt += `\n`;
