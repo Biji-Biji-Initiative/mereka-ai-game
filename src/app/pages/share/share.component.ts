@@ -107,8 +107,12 @@ export class ShareComponent implements OnInit {
     this.certificateService.getCertificateUrl(this.userId!, this.challengeId!)
       .subscribe({
         next: (url) => {
-          this.certificateUrl = url;
-          this.loading = false;
+          if (url) {
+            this.certificateUrl = url;
+            this.loading = false;
+          } else {
+            this.generateCertificate();
+          }
         },
         error: (error) => {
           console.error('Error loading certificate:', error);
