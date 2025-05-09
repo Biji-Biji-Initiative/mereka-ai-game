@@ -18,6 +18,7 @@ export class ContextComponent implements OnInit {
   isSubmitting = false;
   locationSuggestions: any[] = [];
   showSuggestions = false;
+  isEditMode = false;
 
   constructor(
     private router: Router,
@@ -34,8 +35,29 @@ export class ContextComponent implements OnInit {
     });
   }
 
-  ngOnInit() {
+  async ngOnInit() {
     this.setupLocationAutocomplete();
+    await this.loadExistingUserData();
+  }
+
+  private async loadExistingUserData() {
+    const userId = this.userService.getCurrentUserId();
+    if (!userId) return;
+
+    try {
+      const user = await this.userService.getUser(userId);
+      if (user) {
+        this.isEditMode = true;
+        this.contextForm.patchValue({
+          name: user.name,
+          email: user.email,
+          professionalTitle: user.professionalTitle,
+          location: user.location
+        }, { emitEvent: false });
+      }
+    } catch (error) {
+      console.error('Error loading user data:', error);
+    }
   }
 
   private setupLocationAutocomplete() {
@@ -67,7 +89,17 @@ export class ContextComponent implements OnInit {
 
     this.isSubmitting = true;
     try {
-      const userId = await this.userService.createUser(this.contextForm.value);
+      const userId = this.userService.getCurrentUserId();
+      if (!userId) {
+        // Create new user if no userId exists
+        await this.userService.createUser(this.contextForm.value);
+      } else {
+        // Update existing user
+        await this.userService.updateUser(userId, this.contextForm.value);
+        window.history.back();
+        return;
+      }
+
       const nextRoute = this.route.snapshot.data['next'];
       this.router.navigate([nextRoute]);
     } catch (error) {

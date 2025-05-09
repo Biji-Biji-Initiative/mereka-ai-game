@@ -64,7 +64,25 @@ export class AppHeaderComponent implements OnInit, OnDestroy {
     const user = this.authService.getCurrentUser();
     if (user) {
       this.userEmail = user.email || '';
-      this.userName = user.displayName || this.getInitialsFromEmail(this.userEmail);
+
+      // Get user data from Firestore
+      const userId = this.userService.getCurrentUserId();
+      if (userId) {
+        try {
+          const userData = await this.userService.getUser(userId);
+          if (userData) {
+            // Use the name from Firestore if available, otherwise fallback to displayName or email initials
+            this.userName = userData.name || user.displayName || this.getInitialsFromEmail(this.userEmail);
+          } else {
+            this.userName = user.displayName || this.getInitialsFromEmail(this.userEmail);
+          }
+        } catch (error) {
+          console.error('Error loading user data:', error);
+          this.userName = user.displayName || this.getInitialsFromEmail(this.userEmail);
+        }
+      } else {
+        this.userName = user.displayName || this.getInitialsFromEmail(this.userEmail);
+      }
     }
   }
 
