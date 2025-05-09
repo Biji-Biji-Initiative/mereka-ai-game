@@ -20,6 +20,7 @@ export class ResultsComponent implements OnInit {
   rounds: RoundKey[] = [];
   loading = true;
   error = false;
+  challengeId: string = '';
 
   constructor(
     private resultsAnalysisService: ResultsAnalysisService,
@@ -30,8 +31,8 @@ export class ResultsComponent implements OnInit {
   ) { }
 
   async ngOnInit() {
-    const challengeId = this.route.snapshot.paramMap.get('challengeId');
-    if (!challengeId) {
+    this.challengeId = this.route.snapshot.paramMap.get('challengeId') || '';
+    if (!this.challengeId) {
       this.error = true;
       this.loading = false;
       return;
@@ -39,7 +40,7 @@ export class ResultsComponent implements OnInit {
 
     try {
       // Get the current challenge
-      const challenge = await this.challengeService.getChallenge(challengeId);
+      const challenge = await this.challengeService.getChallenge(this.challengeId);
       if (!challenge) {
         this.error = true;
         this.loading = false;
@@ -47,10 +48,10 @@ export class ResultsComponent implements OnInit {
       }
 
       // Mark the challenge as completed
-      await this.challengeService.updateChallengeStatus(challengeId, 'completed');
+      await this.challengeService.updateChallengeStatus(this.challengeId, 'completed');
 
       // Load and analyze results
-      this.loadResults(challengeId);
+      this.loadResults(this.challengeId);
     } catch (error) {
       console.error('Error in results initialization:', error);
       this.error = true;
