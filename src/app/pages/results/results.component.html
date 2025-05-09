@@ -21,7 +21,7 @@
       <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
         <div class="text-center">
           <h1 class="text-4xl font-bold text-gray-900 mb-4">Your AI Fight Club Performance</h1>
-          <div class="text-6xl font-bold text-indigo-600 mb-4">{{ results?.overallScore || 0 }}%</div>
+          <div class="text-6xl font-bold text-indigo-600 mb-4">{{ (results?.overallScore || 0).toFixed(2) }}%</div>
           <p class="text-xl text-gray-600">Overall Score</p>
         </div>
       </div>
