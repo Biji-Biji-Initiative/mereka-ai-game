@@ -7,7 +7,7 @@ import { UserService } from '../../services/user.service';
 import { LoadingService } from '../../services/loading.service';
 import { collection, query, where, getDocs, Timestamp } from '@angular/fire/firestore';
 import { Firestore } from '@angular/fire/firestore';
-import { UserContext } from '../../models/user.model';
+import { UserContext, TraitsData, AttitudesData } from '../../models/user.model';
 
 interface SkillLevel {
   name: string;
@@ -75,6 +75,8 @@ export class DashboardComponent implements OnInit {
   traitsLastUpdated: Date | null = null;
   hasAttitudes: boolean = false;
   attitudesLastUpdated: Date | null = null;
+  traitsData: TraitsData | null = null;
+  attitudesData: AttitudesData | null = null;
 
   constructor(
     private gameService: GameService,
@@ -109,6 +111,7 @@ export class DashboardComponent implements OnInit {
       // Load traits data
       const traits = await this.userService.getUserTraits(userId);
       this.hasTraits = !!traits;
+      this.traitsData = traits;
       if (traits) {
         // Get the last updated timestamp from Firestore
         const traitsRef = collection(this.firestore, 'users');
@@ -129,6 +132,7 @@ export class DashboardComponent implements OnInit {
       // Load attitudes data
       const attitudes = await this.userService.getUserAttitudes(userId);
       this.hasAttitudes = !!attitudes;
+      this.attitudesData = attitudes;
       if (attitudes) {
         // Get the last updated timestamp from Firestore
         const attitudesRef = collection(this.firestore, 'users');
@@ -353,23 +357,18 @@ export class DashboardComponent implements OnInit {
   }
 
   formatDate(date: Date): string {
-    if (!date) return '';
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return date.toLocaleDateString();
+  }
 
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
+  getTraitQuestionTitle(questionId: number): string {
+    return this.traitsData?.questions?.find(q => q.id === questionId)?.title || 'Unknown Trait';
+  }
 
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  getAttitudeQuestionTitle(questionId: number): string {
+    return this.attitudesData?.questions?.find(q => q.id === questionId)?.title || 'Unknown Attitude';
   }
 
   trackByChallenge(index: number, challenge: Challenge): string {
-    return `${challenge.title}-${challenge.focusArea}-${challenge.date.getTime()}`;
+    return challenge.title;
   }
 }

@@ -181,6 +181,17 @@
           <div *ngIf="hasTraits">
             <p class="text-sm text-gray-600">Last Updated</p>
             <p class="text-gray-900">{{ traitsLastUpdated | date:'mediumDate' }}</p>
+            <div class="mt-4 space-y-3">
+              <div *ngFor="let answer of traitsData?.answers" class="flex items-center justify-between">
+                <span class="text-gray-700">{{ getTraitQuestionTitle(answer.questionId) }}</span>
+                <div class="flex items-center">
+                  <div class="w-32 bg-gray-200 rounded-full h-2.5 mr-2">
+                    <div class="bg-indigo-600 h-2.5 rounded-full" [style.width.%]="(answer.answer / 5) * 100"></div>
+                  </div>
+                  <span class="text-sm text-gray-600">{{ answer.answer }}/5</span>
+                </div>
+              </div>
+            </div>
           </div>
           <div *ngIf="!hasTraits">
             <p class="text-gray-600">No traits assessment completed yet</p>
@@ -193,6 +204,17 @@
           <div *ngIf="hasAttitudes">
             <p class="text-sm text-gray-600">Last Updated</p>
             <p class="text-gray-900">{{ attitudesLastUpdated | date:'mediumDate' }}</p>
+            <div class="mt-4 space-y-3">
+              <div *ngFor="let answer of attitudesData?.answers" class="flex items-center justify-between">
+                <span class="text-gray-700">{{ getAttitudeQuestionTitle(answer.questionId) }}</span>
+                <div class="flex items-center">
+                  <div class="w-32 bg-gray-200 rounded-full h-2.5 mr-2">
+                    <div class="bg-indigo-600 h-2.5 rounded-full" [style.width.%]="(answer.answer / 5) * 100"></div>
+                  </div>
+                  <span class="text-sm text-gray-600">{{ answer.answer }}/5</span>
+                </div>
+              </div>
+            </div>
           </div>
           <div *ngIf="!hasAttitudes">
             <p class="text-gray-600">No attitudes assessment completed yet</p>
