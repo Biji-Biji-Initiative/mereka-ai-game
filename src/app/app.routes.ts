@@ -59,12 +59,12 @@ export const routes: Routes = [
     data: { next: 'dashboard' }
   },
   {
-    path: 'dashboard',
-    component: DashboardComponent
+    path: 'share/:challengeId',
+    component: ShareComponent
   },
   {
-    path: 'share',
-    component: ShareComponent
+    path: 'dashboard',
+    component: DashboardComponent
   },
   {
     path: 'profile',
