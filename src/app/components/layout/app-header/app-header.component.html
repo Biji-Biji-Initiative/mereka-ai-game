@@ -48,7 +48,7 @@
           <button (click)="toggleUserDropdown()" class="focus:outline-none">
             <!-- Avatar -->
             <div class="w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center font-bold">
-              {{ userName }}
+              {{ userName?.charAt(0) }}
             </div>
           </button>
 
