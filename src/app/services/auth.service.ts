@@ -103,6 +103,8 @@ export class AuthService {
         if (existingUser) {
           localStorage.setItem('mereka_user_id', existingUser.id);
         } else {
+          //logout and throw error
+          await signOut(this.auth);
           console.error('No user ID found in localStorage');
           throw new Error('User not found');
         }
