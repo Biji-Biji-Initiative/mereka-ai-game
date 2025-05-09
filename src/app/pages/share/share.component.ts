@@ -1,9 +1,8 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, ActivatedRoute, Router } from '@angular/router';
-import { GameService } from '../../services/game.service';
-import { ResultsAnalysisService, FinalResults } from '../../services/results-analysis.service';
 import { UserService } from '../../services/user.service';
+import { CertificateService } from '../../services/certificate.service';
 
 @Component({
   selector: 'app-share',
@@ -19,29 +18,22 @@ import { UserService } from '../../services/user.service';
 
         <!-- Error State -->
         <div *ngIf="error" class="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-          <h2 class="text-2xl font-bold text-red-800 mb-4">Unable to Load Results</h2>
-          <p class="text-red-600 mb-6">We encountered an issue loading your results. Please try again later.</p>
+          <h2 class="text-2xl font-bold text-red-800 mb-4">Unable to Load Certificate</h2>
+          <p class="text-red-600 mb-6">{{ error }}</p>
           <button routerLink="/dashboard"
             class="bg-red-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-red-700 transition-colors">
             Return to Dashboard
           </button>
         </div>
 
-        <!-- Share Card -->
-        <div *ngIf="!loading && !error" class="bg-white rounded-lg shadow-lg p-8 mb-8">
+        <!-- Certificate Card -->
+        <div *ngIf="!loading && !error && certificateUrl" class="bg-white rounded-lg shadow-lg p-8 mb-8">
           <div class="text-center">
-            <h1 class="text-3xl font-bold text-gray-900 mb-4">Share Your Results</h1>
-            <p class="text-lg text-gray-600 mb-8">Share your AI Fight Club performance with others!</p>
-
-            <!-- Score Display -->
-            <div class="bg-indigo-50 rounded-lg p-6 mb-8">
-              <div class="text-5xl font-bold text-indigo-600 mb-2">{{ (results?.overallScore || 0).toFixed(2) }}%</div>
-              <p class="text-xl text-gray-600">Overall Score</p>
-              <p *ngIf="results?.focusArea?.name" class="text-lg text-indigo-800 mt-2">
-                Focus Area: {{ results?.focusArea?.name }}
-              </p>
+            <h1 class="text-3xl font-bold text-gray-900 mb-4">Your AI-Generated Certificate</h1>
+            <p class="text-lg text-gray-600 mb-8">Share your achievement with others!</p>
+            <div class="flex justify-center mb-8">
+              <img [src]="certificateUrl" alt="Certificate" class="rounded-lg shadow-lg max-w-full h-auto" style="max-width: 512px;" />
             </div>
-
             <!-- Share Options -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
               <button (click)="shareOnTwitter()" class="flex items-center justify-center space-x-2 bg-[#1DA1F2] text-white px-6 py-3 rounded-lg font-semibold hover:bg-[#1a8cd8] transition-colors">
@@ -105,16 +97,15 @@ import { UserService } from '../../services/user.service';
   `]
 })
 export class ShareComponent implements OnInit {
-  results?: FinalResults;
-  shareUrl: string = '';
+  certificateUrl: string | null = null;
   loading = true;
-  error = false;
+  error: string | null = null;
   copySuccess = false;
+  shareUrl: string = '';
   challengeId: string = '';
 
   constructor(
-    private gameService: GameService,
-    private resultsAnalysisService: ResultsAnalysisService,
+    private certificateService: CertificateService,
     private userService: UserService,
     private route: ActivatedRoute,
     private router: Router
@@ -122,62 +113,66 @@ export class ShareComponent implements OnInit {
 
   ngOnInit() {
     this.challengeId = this.route.snapshot.paramMap.get('challengeId') || '';
-    if (!this.challengeId) {
-      this.error = true;
+    const userId = this.userService.getCurrentUserId();
+    this.shareUrl = window.location.href;
+
+    if (!userId || !this.challengeId) {
+      this.error = 'Missing user or challenge ID';
       this.loading = false;
       return;
     }
 
-    this.loadResults();
-    this.shareUrl = window.location.href;
-  }
-
-  private loadResults() {
-    this.loading = true;
-    this.error = false;
-
-    this.resultsAnalysisService.analyzeResults(
-      this.challengeId,
-      this.userService.getCurrentUserId() || ''
-    ).subscribe({
-      next: (results) => {
-        this.results = results;
+    this.certificateService.getCertificateUrl(userId, this.challengeId).subscribe((url: string | null) => {
+      if (url) {
+        this.certificateUrl = url;
         this.loading = false;
-      },
-      error: (err) => {
-        console.error('Error loading results:', err);
-        this.error = true;
-        this.loading = false;
+      } else {
+        const dalleParams = {
+          model: 'dall-e-3',
+          prompt: `Create a professional certificate for user ${userId} for challenge ${this.challengeId}. Include their achievement and make it visually appealing for sharing.`,
+          n: 1,
+          size: '1024x1024',
+          quality: 'standard',
+          response_format: 'url'
+        };
+        this.certificateService.generateCertificate(userId, this.challengeId, dalleParams).subscribe({
+          next: (imgUrl: string) => {
+            this.certificateUrl = imgUrl;
+            this.loading = false;
+          },
+          error: (err: any) => {
+            this.error = 'Failed to generate certificate';
+            this.loading = false;
+          }
+        });
       }
+    }, (err: any) => {
+      this.error = 'Failed to load certificate information';
+      this.loading = false;
     });
   }
 
-  private getShareText(): string {
-    const score = (this.results?.overallScore || 0).toFixed(2);
-    const focusArea = this.results?.focusArea?.name || 'AI Fight Club';
-    return `I scored ${score}% in the ${focusArea} challenge! Can you beat my score?`;
-  }
-
   shareOnTwitter() {
-    const text = this.getShareText();
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(this.shareUrl)}`;
+    if (!this.certificateUrl) return;
+    const url = `https://twitter.com/intent/tweet?url=${encodeURIComponent(this.certificateUrl)}`;
     window.open(url, '_blank');
   }
 
   shareOnLinkedIn() {
-    const text = this.getShareText();
-    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(this.shareUrl)}`;
+    if (!this.certificateUrl) return;
+    const url = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(this.certificateUrl)}`;
     window.open(url, '_blank');
   }
 
   shareOnFacebook() {
-    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.shareUrl)}`;
+    if (!this.certificateUrl) return;
+    const url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(this.certificateUrl)}`;
     window.open(url, '_blank');
   }
 
   shareOnWhatsApp() {
-    const text = this.getShareText();
-    const url = `https://wa.me/?text=${encodeURIComponent(text + ' ' + this.shareUrl)}`;
+    if (!this.certificateUrl) return;
+    const url = `https://wa.me/?text=${encodeURIComponent(this.certificateUrl)}`;
     window.open(url, '_blank');
   }
 

@@ -4,6 +4,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { initializeApp, provideFirebaseApp } from '@angular/fire/app';
 import { getFirestore, provideFirestore } from '@angular/fire/firestore';
 import { getAuth, provideAuth } from '@angular/fire/auth';
+import { getFunctions, provideFunctions } from '@angular/fire/functions';
 import { environment } from '../environments/environment';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { InitialSetupGuard } from './guards/initial-setup.guard';
@@ -18,7 +19,8 @@ export const appConfig: ApplicationConfig = {
     importProvidersFrom(
       provideFirebaseApp(() => initializeApp(environment.firebase)),
       provideFirestore(() => getFirestore()),
-      provideAuth(() => getAuth())
+      provideAuth(() => getAuth()),
+      provideFunctions(() => getFunctions())
     ),
     provideAnimations(),
     InitialSetupGuard
