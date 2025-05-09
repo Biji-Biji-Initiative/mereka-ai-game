@@ -165,7 +165,6 @@ export class DynamicRoundComponent implements OnInit {
       this.isLoading = false;
     }
 
-    this.startTimer();
   }
 
   startTimer() {
