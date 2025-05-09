@@ -110,4 +110,16 @@ export class UserService extends BaseService {
     const user = await this.getUser(userId);
     return user?.attitudes || null;
   }
+
+  async updateUser(userId: string, context: UserContext): Promise<void> {
+    try {
+      await this.updateDocument(this.COLLECTION, userId, {
+        ...context,
+        updatedAt: new Date()
+      });
+    } catch (error) {
+      console.error('Error updating user:', error);
+      throw error;
+    }
+  }
 }

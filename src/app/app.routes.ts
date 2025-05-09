@@ -31,7 +31,7 @@ export const routes: Routes = [
     path: 'context',
     component: ContextComponent,
     data: { next: 'traits' },
-    canActivate: [InitialSetupGuard]
+    canActivate: []
   },
   {
     path: 'traits',
